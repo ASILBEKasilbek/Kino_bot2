@@ -4,15 +4,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters import Command
 from aiogram.enums import ContentType
-from config import ADMIN_IDS, DB_PATH
+from config import ADMIN_IDS, DB_PATH,CHANNEL_ID
 from utils.gamification import Gamification
 from datetime import datetime
 import sqlite3
 import logging
 import asyncio
-
-import sqlite3
-from config import DB_PATH
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 
@@ -139,8 +136,7 @@ async def process_movie_video(message: Message, state: FSMContext):
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
-    
-    file_id = message.video.file_id
+
     user_data = await state.get_data()
     movie_code = user_data["code"]
     title = user_data["title"]
@@ -148,18 +144,30 @@ async def process_movie_video(message: Message, state: FSMContext):
     year = user_data["year"]
     description = user_data["description"]
     is_premium = user_data["is_premium"]
-    
+
+    # 🟢 Videoni kanalga yuborish
+    sent_msg = await message.bot.send_video(
+        chat_id=CHANNEL_ID,
+        video=message.video.file_id,
+        caption=f"{title} ({year})\n🎬 Janr: {genre}\n📝 {description}",
+        supports_streaming=True
+    )
+
+    file_id = sent_msg.video.file_id  # Endi kanalga yuborilgan video file_id sini olamiz
+
+    # 🔵 Bazaga yozish
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("INSERT INTO movies (file_id, movie_code, title, genre, year, description, is_premium) VALUES (?, ?, ?, ?, ?, ?, ?)",
               (file_id, movie_code, title, genre, year, description, is_premium))
     conn.commit()
     conn.close()
-    
+
+    # 🧩 Gamification XP
     gamification = Gamification()
     new_xp = gamification.add_xp(message.from_user.id, "add_movie")
-    
-    await message.reply(f"🎉 Kino qo‘shildi: {title}\n📊 Yangi XP: {new_xp}")
+
+    await message.reply(f"🎉 Kino kanalga yuklandi: {title}\n📊 Yangi XP: {new_xp}")
     await state.clear()
 
 @admin_router.callback_query(F.data == "block_user")

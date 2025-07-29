@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message,CallbackQuery
-from config import DB_PATH,BOT_TOKEN,CHANNEL_IDS
+from config import DB_PATH,BOT_TOKEN,CHANNEL_IDS,CHANNEL_ID
 from database.models import get_movie_by_code
 from utils.subscription_check import check_subscription_status
 from aiogram import Bot
@@ -93,7 +93,8 @@ async def start_command(message: Message, state: FSMContext):
                 video=file_id,
                 caption=caption,
                 parse_mode="HTML",
-                reply_markup=keyboard
+                reply_markup=keyboard,
+                protect_content=True  # Video faylni himoya qilish
             )
             return
         else:
@@ -158,7 +159,8 @@ async def handle_movie_code(message: Message, state: FSMContext):
         video=file_id,
         caption=caption,
         parse_mode="HTML",
-        reply_markup=keyboard
+        reply_markup=keyboard,
+        protect_content=True  # Video faylni himoya qilish
     )
 
     await state.clear()
@@ -223,7 +225,7 @@ async def inline_query_handler(inline_query: InlineQuery):
             description = movie[6]
             is_premium = movie[7]
             view_count = movie[8]
-            a='MegaKino_Uz_Bot'
+            a='Sekret_kinoborbot'
             a1 = "Healthy_Helper_robot"
             btn = InlineKeyboardMarkup(
                 inline_keyboard=[
@@ -284,7 +286,7 @@ async def show_all_movies(callback_query: CallbackQuery):
     buttons = []
     for title, code in movies:
         buttons.append(
-            [InlineKeyboardButton(text=title, url=f"https://t.me/MegaKino_Uz_Bot?start={code}")]
+            [InlineKeyboardButton(text=title, url=f"https://t.me/Sekret_kinoborbot?start={code}")]
         )
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
