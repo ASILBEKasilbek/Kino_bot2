@@ -8,6 +8,5 @@ async def support_command(message: Message):
     await message.answer(
         "🆘 <b>Texnik yordam kerakmi?</b>\n\n"
         "Agar sizda savollar, muammolar yoki takliflar bo‘lsa, biz bilan bog‘laning.\n"
-        "📢 <a href='https://t.me/Dasturch1_asilbek'>Texnik yordam kanali</a> orqali 24/7 xizmatdamiz.",
         parse_mode="HTML"
     )
