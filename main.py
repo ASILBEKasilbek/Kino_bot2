@@ -37,6 +37,11 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher(storage=MemoryStorage())
     print("Bot ishga tushmoqda...")
+    print("Bot tokeni:", BOT_TOKEN)
+    me = await bot.get_me()
+    print("Bot nomi:", me.username)
+
+
 
     dp.include_router(support_router)
     dp.include_router(admin_router)
