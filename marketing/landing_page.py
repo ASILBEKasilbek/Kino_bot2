@@ -1,0 +1,51 @@
+from aiogram import Router
+from aiogram.types import Message
+from aiogram.filters import Command
+from config import ADMIN_IDS
+
+landing_page_router = Router()
+
+@landing_page_router.message(Command("landing_page"))
+async def landing_page_command(message: Message):
+    # Faqat adminlar ko'rishi mumkin
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("🚫 Faqat adminlar landing sahifasini ko‘rishi mumkin!")
+        return
+
+    # HTML kontent
+    html_content = """
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KinoBot Pro++</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <header class="bg-blue-600 py-4">
+        <h1 class="text-4xl font-bold text-center">KinoBot Pro++</h1>
+        <p class="text-center text-lg mt-2">Eng sevimli kinolaringiz Telegramda!</p>
+    </header>
+    <section class="max-w-4xl mx-auto py-8">
+        <h2 class="text-2xl font-semibold mb-4">Nima uchun KinoBot?</h2>
+        <ul class="list-disc pl-6 space-y-2">
+            <li>🎬 Kino kodi bilan bir zumda tomosha qiling</li>
+            <li>💎 Premium obuna bilan eksklyuziv kontent</li>
+            <li>🤝 Do‘stlaringizni taklif qiling va bonus oling</li>
+            <li>🧠 AI orqali shaxsiy kino tavsiyalari</li>
+        </ul>
+        <div class="text-center mt-6">
+            <a href="https://t.me/KinoBotProPlus" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Botga o‘tish</a>
+        </div>
+    </section>
+</body>
+</html>
+    """
+
+    # Faylga yozish
+    with open("landing_page.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+    # Foydalanuvchiga xabar
+    await message.reply("✅ Landing sahifasi yaratildi: `landing_page.html` fayl sifatida loyihangiz papkasida.")
