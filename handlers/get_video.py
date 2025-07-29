@@ -110,12 +110,13 @@ async def start_command(message: Message, state: FSMContext):
         ]
     )
     await message.answer(
-        f"🎬 <b>MegaKinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
-        "📽 Bu bot orqali filmlar olamiga sho‘ng‘ing — qidiruv, tavsiyalar, to‘liq ro‘yxatlar va yana ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
-        "🧾 <i>Iltimos, kino kodini yuboring yoki quyidagi menyudan tanlang:</i>",
+        f"🎬 <b>Sekret KinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
+        "📽 Bu yerda siz sirli va noyob kinolarni topasiz — qidiruv, tavsiyalar, maxsus to‘plamlar va boshqa ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
+        "🧾 <i>Iltimos, kino kodini yuboring yoki quyidagi menyudan birini tanlang:</i>",
         parse_mode="HTML",
         reply_markup=keyboard
     )
+
     await state.set_state(MovieStates.waiting_for_movie_code)
 
 @video_router.message(MovieStates.waiting_for_movie_code)
