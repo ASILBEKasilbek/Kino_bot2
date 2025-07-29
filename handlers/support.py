@@ -7,6 +7,6 @@ support_router = Router()
 async def support_command(message: Message):
     await message.answer(
         "🆘 <b>Texnik yordam kerakmi?</b>\n\n"
-        "Agar sizda savollar, muammolar yoki takliflar bo‘lsa, biz bilan bog‘laning.\n"
+        "Agar sizda savollar, muammolar yoki takliflar bo‘lsa, biz bilan bog‘laning.\n",
         parse_mode="HTML"
     )
