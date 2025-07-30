@@ -15,10 +15,6 @@ class ManageChannelForm(StatesGroup):
 
 @channel_manage_router.message(Command("manage_channels"))
 async def manage_channels_command(message: Message):
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
-        return
-
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="➕ Kanal qo‘shish", callback_data="add_channel"),
          InlineKeyboardButton(text="➖ Kanal o‘chirish", callback_data="remove_channel")]
