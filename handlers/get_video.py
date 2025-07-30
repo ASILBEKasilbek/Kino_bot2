@@ -47,14 +47,26 @@ async def start_command(message: Message, state: FSMContext):
     conn.close()
     
     is_subscribed = await check_subscription_status(bot, user_id)
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
     if not is_subscribed:
-        channel_links = "\n".join([f"📢 <a href='https://t.me/{channel}'>Kanal</a>" for channel in CHANNEL_IDS])
+        keyboard = InlineKeyboardMarkup(row_width=1)
+        for channel in CHANNEL_IDS:
+            keyboard.add(
+                InlineKeyboardButton(
+                    text="📢 Kanalga obuna bo'lish",
+                    url=f"https://t.me/{channel}"
+                )
+            )
+
         await message.reply(
             f"👋 Xush kelibsiz, {username}!\n"
-            f"KinoBot Pro++ ga xush kelibsiz! Kino olish uchun quyidagi kanallarga obuna bo‘ling:\n{channel_links}",
-            parse_mode="HTML"
+            f"KinoBot Pro++ ga xush kelibsiz!\n\n"
+            f"🎬 Kino olish uchun quyidagi kanallarga obuna bo‘ling:",
+            reply_markup=keyboard
         )
         return
+
     
     # 🔍 Deep link orqali yuborilgan movie code ni tekshir
     args = message.text.split(maxsplit=1)
