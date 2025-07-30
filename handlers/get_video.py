@@ -33,6 +33,17 @@ async def process_get_video_callback(callback: CallbackQuery, state: FSMContext)
     await state.set_state(MovieStates.waiting_for_movie_code)
     await callback.answer()
 
+
+@video_router.callback_query(F.data == "check_subscription")
+async def handle_check_subscription(callback: CallbackQuery, bot: Bot):
+    user_id = callback.from_user.id
+    is_subscribed = await check_subscription_status(bot, user_id)
+
+    if is_subscribed:
+        await callback.message.edit_text("✅ Obuna bo‘lganingiz tasdiqlandi! Endi kinolarni olish mumkin.")
+    else:
+        await callback.answer("❌ Siz hali ham obuna emassiz!", show_alert=True)
+
 @video_router.message(Command("start"))
 async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
@@ -48,17 +59,25 @@ async def start_command(message: Message, state: FSMContext):
     
     is_subscribed = await check_subscription_status(bot, user_id)
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    print(f"Foydalanuvchi {user_id} obuna holati: {is_subscribed}")
+
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
     if not is_subscribed:
-
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[])  # ❗ row_width yo'q!
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[])
 
         for channel in CHANNEL_IDS:
             button = InlineKeyboardButton(
-                text="📢 Kanalga obuna bo'lish",
-                url=f"https://t.me/{channel}"
+                text=f"📢 {channel} ",
+                url=f"https://t.me/{channel.lstrip('@')}"  # @ ni olib tashlab link qilish
             )
-            keyboard.inline_keyboard.append([button])  # Har bir tugma alohida qatorda
+            keyboard.inline_keyboard.append([button])
+
+        check_button = InlineKeyboardButton(
+            text="✅ Obuna bo‘ldim",
+            callback_data="check_subscription"
+        )
+        keyboard.inline_keyboard.append([check_button])  # Tugmani qo‘shamiz
 
         await message.reply(
             f"👋 Xush kelibsiz, {username}!\n"
@@ -67,8 +86,8 @@ async def start_command(message: Message, state: FSMContext):
         )
         return
 
+
         
-    # 🔍 Deep link orqali yuborilgan movie code ni tekshir
     args = message.text.split(maxsplit=1)
     if len(args) > 1:
         movie_code = args[1].strip().upper()
