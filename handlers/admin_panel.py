@@ -570,7 +570,8 @@ async def manage_admins_callback(callback: CallbackQuery):
 @admin_router.callback_query(F.data == "manage_channels")
 async def manage_channels_callback(callback: CallbackQuery):
     logging.info(f"manage_channels callback triggered by user_id={callback.from_user.id}, callback_data={callback.data}")
-    await callback.message.reply(callback.from_user.id)
+    print(90)
+    await callback.message.reply(str(callback.from_user.id))
     if callback.from_user.id not in ADMIN_IDS:
         await callback.message.reply("🚫 Faqat adminlar kanallarni boshqarishi mumkin!")
         return
