@@ -10,7 +10,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from database.models import get_top_movies
+from database.models import get_top_movies,get_all_channels
 
 import sqlite3
 import uuid
@@ -51,7 +51,7 @@ async def handle_check_subscription(callback: CallbackQuery, bot: Bot ,state: FS
                 [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/kino_kodlar_t")]
             ]
         )
-        await callback.message.answer(
+        await callback.message.edit_text(
             f"🎬 <b>Sekret KinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
             "📽 Bu yerda siz sirli va noyob kinolarni topasiz — qidiruv, tavsiyalar, maxsus to‘plamlar va boshqa ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
             "🧾 <i>Iltimos, kino kodini yuboring yoki quyidagi menyudan birini tanlang:</i>",
@@ -81,7 +81,7 @@ async def start_command(message: Message, state: FSMContext):
     if not is_subscribed:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[])
 
-        for channel in CHANNEL_IDS:
+        for channel in get_all_channels():
             button = InlineKeyboardButton(
                 text=f"📢 {channel} ",
                 url=f"https://t.me/{channel.lstrip('@')}"  # @ ni olib tashlab link qilish

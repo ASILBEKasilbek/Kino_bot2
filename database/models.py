@@ -2,6 +2,13 @@
 import sqlite3
 from config import DB_PATH
 
+def get_all_channels():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT channel_id FROM channels")
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
 
 def get_movie_by_code(code: str):
     conn = sqlite3.connect(DB_PATH)
