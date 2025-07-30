@@ -45,29 +45,35 @@ async def start_command(message: Message, state: FSMContext):
               (user_id, username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     conn.commit()
     conn.close()
+    print(f"User {user_id} ({username}) started the bot.")
     
     is_subscribed = await check_subscription_status(bot, user_id)
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
     if not is_subscribed:
-        keyboard = InlineKeyboardMarkup(row_width=1)
-        for channel in CHANNEL_IDS:
-            keyboard.add(
-                InlineKeyboardButton(
-                    text="📢 Kanalga obuna bo'lish",
-                    url=f"https://t.me/{channel}"
-                )
-            )
+        print(f"User {user_id} is not subscribed to the channel.")
 
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[])  # ❗ row_width yo'q!
+
+        print(CHANNEL_IDS)
+        for channel in CHANNEL_IDS:
+            print(f"Adding channel button for {channel}")
+            button = InlineKeyboardButton(
+                text="📢 Kanalga obuna bo'lish",
+                url=f"https://t.me/{channel}"
+            )
+            keyboard.inline_keyboard.append([button])  # Har bir tugma alohida qatorda
+
+        print(123)
         await message.reply(
             f"👋 Xush kelibsiz, {username}!\n"
-            f"KinoBot Pro++ ga xush kelibsiz!\n\n"
             f"🎬 Kino olish uchun quyidagi kanallarga obuna bo‘ling:",
             reply_markup=keyboard
         )
         return
 
-    
+        
     # 🔍 Deep link orqali yuborilgan movie code ni tekshir
     args = message.text.split(maxsplit=1)
     if len(args) > 1:
