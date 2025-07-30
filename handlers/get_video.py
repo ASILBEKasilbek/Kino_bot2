@@ -35,12 +35,31 @@ async def process_get_video_callback(callback: CallbackQuery, state: FSMContext)
 
 
 @video_router.callback_query(F.data == "check_subscription")
-async def handle_check_subscription(callback: CallbackQuery, bot: Bot):
+async def handle_check_subscription(callback: CallbackQuery, bot: Bot ,state: FSMContext):
     user_id = callback.from_user.id
     is_subscribed = await check_subscription_status(bot, user_id)
 
+    username = callback.message.from_user.username or "No username"
+
     if is_subscribed:
-        await callback.message.edit_text("✅ Obuna bo‘lganingiz tasdiqlandi! Endi kinolarni olish mumkin.")
+        
+    # Agar startda kod bo'lmasa - oddiy menyu chiqar
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="🔎 Qidiruv", switch_inline_query_current_chat=""),
+                InlineKeyboardButton(text="Top 5 kinolar", callback_data="top_5_kinolar")],
+                [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/kino_kodlar_t")]
+            ]
+        )
+        await callback.message.answer(
+            f"🎬 <b>Sekret KinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
+            "📽 Bu yerda siz sirli va noyob kinolarni topasiz — qidiruv, tavsiyalar, maxsus to‘plamlar va boshqa ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
+            "🧾 <i>Iltimos, kino kodini yuboring yoki quyidagi menyudan birini tanlang:</i>",
+            parse_mode="HTML",
+            reply_markup=keyboard
+        )
+
+        await state.set_state(MovieStates.waiting_for_movie_code)
     else:
         await callback.answer("❌ Siz hali ham obuna emassiz!", show_alert=True)
 
@@ -58,10 +77,6 @@ async def start_command(message: Message, state: FSMContext):
     conn.close()
     
     is_subscribed = await check_subscription_status(bot, user_id)
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-    print(f"Foydalanuvchi {user_id} obuna holati: {is_subscribed}")
-
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
     if not is_subscribed:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[])
@@ -125,7 +140,7 @@ async def start_command(message: Message, state: FSMContext):
                 caption=caption,
                 parse_mode="HTML",
                 reply_markup=keyboard,
-                protect_content=True  # Video faylni himoya qilish
+                protect_content=True
             )
             return
         else:
