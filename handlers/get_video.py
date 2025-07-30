@@ -106,7 +106,7 @@ async def start_command(message: Message, state: FSMContext):
         inline_keyboard=[
             [InlineKeyboardButton(text="🔎 Qidiruv", switch_inline_query_current_chat=""),
              InlineKeyboardButton(text="Top 5 kinolar", callback_data="top_5_kinolar")],
-            [InlineKeyboardButton(text="📢 Barcha kinolar", callback_data="barcha_kinolar")]
+            [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/kino_kodlar_t")]
         ]
     )
     await message.answer(
@@ -151,7 +151,7 @@ async def handle_movie_code(message: Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="📢 Barcha kodlar",callback_data="barcha_kinolar")
+                InlineKeyboardButton(text="📢 Barcha kodlar",url="https://t.me/kino_kodlar_t")
             ]
         ]
     )
@@ -255,7 +255,6 @@ async def inline_query_handler(inline_query: InlineQuery):
                         parse_mode="Markdown"
                     ),
                     reply_markup=btn,
-                    thumb_url="https://ibb.co/ymrn8HVG",
                 )
             )
     else:
