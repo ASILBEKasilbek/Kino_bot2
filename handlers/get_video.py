@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message,CallbackQuery
 from config import DB_PATH,BOT_TOKEN,CHANNEL_IDS,CHANNEL_ID
 from database.models import get_movie_by_code
-from utils.subscription_check import check_subscription_status
+from utils.subscription_check import check_subscription_status,confirm_join
 from aiogram import Bot
 import sqlite3
 from datetime import datetime
@@ -11,7 +11,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.models import get_top_movies,get_all_channels
-
+import re
 import sqlite3
 import uuid
 from aiogram import types
@@ -37,7 +37,7 @@ async def process_get_video_callback(callback: CallbackQuery, state: FSMContext)
 @video_router.callback_query(F.data == "check_subscription")
 async def handle_check_subscription(callback: CallbackQuery, bot: Bot ,state: FSMContext):
     user_id = callback.from_user.id
-    is_subscribed = await check_subscription_status(bot, user_id)
+    is_subscribed = await check_subscription_status(bot, user_id,channel="")
 
     username = callback.message.from_user.username or "No username"
 
@@ -63,6 +63,18 @@ async def handle_check_subscription(callback: CallbackQuery, bot: Bot ,state: FS
     else:
         await callback.answer("❌ Siz hali ham obuna emassiz!", show_alert=True)
 
+@video_router.callback_query(F.data.startswith("join_"))
+async def handle_join_click(callback: CallbackQuery, bot: Bot):
+    channel_id = callback.data.split("join_")[1]
+    user_id = callback.from_user.id
+    print(f"Foydalanuvchi {user_id} kanal {channel_id} ga join bosdi")
+
+    success = await confirm_join(bot, user_id, channel_id)
+    if success:
+        await callback.answer("✅ Join bosilgan deb qayd etildi", show_alert=True)
+    else:
+        await callback.answer("❌ Xatolik yuz berdi", show_alert=True)
+
 @video_router.message(Command("start"))
 async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
@@ -75,29 +87,69 @@ async def start_command(message: Message, state: FSMContext):
               (user_id, username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     conn.commit()
     conn.close()
-    
-    is_subscribed = await check_subscription_status(bot, user_id)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+    channels = get_all_channels()
+    all_joined = True
+    user_id = message.from_user.id  # foydalanuvchining ID
+    i = 1
 
-    if not is_subscribed:
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[])
-        i=1
-        for channel in get_all_channels():
+    print("Kanallar:", channels)
+
+    for channel in channels:
+        url = ""
+        print(f"Channel: {channel}")
+
+        # Kanal ID ni aniqlash
+        if isinstance(channel, int):
+            channel_id = f"-100{channel}" if not str(channel).startswith("-100") else str(channel)
+        elif re.match(r"^\d{9,}$", str(channel)):
+            channel_id = f"-100{channel}" if not str(channel).startswith("-100") else str(channel)
+        else:
+            channel_id = channel
+
+        # Foydalanuvchi shu kanal uchun join bosganmi yoki yo'q
+        is_joined = await check_subscription_status(bot, user_id, channel_id)
+        if not is_joined:
+            all_joined = False
+
+            # URL yaratish
+            if str(channel_id).startswith('@'):
+                url = f"https://t.me/{channel_id.lstrip('@')}"
+            elif str(channel_id).startswith("https://t.me/"):
+                url = channel_id
+            elif re.match(r"^-100\d+$", str(channel_id)):
+                try:
+                    chat = await bot.get_chat(channel_id)
+                    if chat.username:
+                        url = f"https://t.me/{chat.username}"
+                    else:
+                        url = f"https://t.me/c/{channel_id.lstrip('-100')}/1"
+                except Exception as e:
+                    print(f"Xatolik chatni olishda: {e}")
+                    continue
+            else:
+                continue  # Tushunarsiz format bo‘lsa
+
+            # Kanal tugmasi
             button = InlineKeyboardButton(
-                text=f"📢 {i} Kanal ",
-                url=f"https://t.me/{channel.lstrip('@')}"  # @ ni olib tashlab link qilish
+                text=f"📢 {i} Kanal",
+                url=url
             )
-            i+=1
             keyboard.inline_keyboard.append([button])
+            i += 1
 
+    # Agar kamida 1 ta kanalga join bosilmagan bo‘lsa
+    if not all_joined:
+        # "Obuna bo‘ldim" tugmasi
         check_button = InlineKeyboardButton(
             text="✅ Obuna bo‘ldim",
             callback_data="check_subscription"
         )
-        keyboard.inline_keyboard.append([check_button])  # Tugmani qo‘shamiz
+        keyboard.inline_keyboard.append([check_button])
 
         await message.reply(
             f"👋 Xush kelibsiz, {username}!\n"
-            f"🎬 Kino olish uchun quyidagi kanallarga obuna bo‘ling:",
+            f"🎬 Kino olish uchun quyidagi kanallarga obuna bo‘ling yoki join tugmasini bosing:",
             reply_markup=keyboard
         )
         return
@@ -112,7 +164,7 @@ async def start_command(message: Message, state: FSMContext):
         if movie:
             movie_id, file_id, title, genre, year, description, is_premium = movie
 
-            if is_premium and not is_subscribed:
+            if is_premium and not all_joined:
                 await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
                 return
 
@@ -132,7 +184,7 @@ async def start_command(message: Message, state: FSMContext):
             )
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="📢 Barcha kinolar", callback_data="barcha_kinolar")],
+                    [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/erotika_kinolar_hikoyalar")],
                 ]
             )
             await bot.send_video(
@@ -153,7 +205,7 @@ async def start_command(message: Message, state: FSMContext):
         inline_keyboard=[
             [InlineKeyboardButton(text="🔎 Qidiruv", switch_inline_query_current_chat=""),
              InlineKeyboardButton(text="Top 5 kinolar", callback_data="top_5_kinolar")],
-            [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/kino_kodlar_t")]
+            [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/erotika_kinolar_hikoyalar")]
         ]
     )
     await message.answer(
@@ -198,7 +250,7 @@ async def handle_movie_code(message: Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="📢 Barcha kodlar",url="https://t.me/kino_kodlar_t")
+                InlineKeyboardButton(text="📢 Barcha kodlar",url="https://t.me/erotika_kinolar_hikoyalar")
             ]
         ]
     )
@@ -211,7 +263,7 @@ async def handle_movie_code(message: Message, state: FSMContext):
         protect_content=True  # Video faylni himoya qilish
     )
 
-    await state.clear()
+    # await state.clear()
 
 @video_router.callback_query(lambda c: c.data == "top_5_kinolar")
 async def top_5_handler(callback: CallbackQuery):

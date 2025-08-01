@@ -149,6 +149,15 @@ def init_db():
             channel_id TEXT UNIQUE NOT NULL
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS join_confirmations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            channel TEXT,
+            is_joined BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
 
 
     conn.commit()
