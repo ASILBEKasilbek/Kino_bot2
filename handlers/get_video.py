@@ -80,12 +80,13 @@ async def start_command(message: Message, state: FSMContext):
 
     if not is_subscribed:
         keyboard = InlineKeyboardMarkup(inline_keyboard=[])
-
+        i=1
         for channel in get_all_channels():
             button = InlineKeyboardButton(
-                text=f"📢 {channel} ",
+                text=f"📢 {i} Kanal ",
                 url=f"https://t.me/{channel.lstrip('@')}"  # @ ni olib tashlab link qilish
             )
+            i+=1
             keyboard.inline_keyboard.append([button])
 
         check_button = InlineKeyboardButton(
