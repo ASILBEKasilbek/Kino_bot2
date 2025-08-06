@@ -77,6 +77,7 @@ async def handle_join_click(callback: CallbackQuery, bot: Bot):
 
 @video_router.message(Command("start"))
 async def start_command(message: Message, state: FSMContext):
+    print(message)
     bot = Bot(token=BOT_TOKEN)
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
@@ -217,25 +218,32 @@ async def start_command(message: Message, state: FSMContext):
     )
 
     await state.set_state(MovieStates.waiting_for_movie_code)
+    print(90)
 
 @video_router.message(MovieStates.waiting_for_movie_code)
 async def handle_movie_code(message: Message, state: FSMContext):
     movie_code = message.text.strip().upper()
+    print(movie_code)
     movie = get_movie_by_code(movie_code)
+    print(message.text)
     
     if not movie:
         await message.reply("⚠️ Kino topilmadi!")
         return
-
+    print(movie)
     movie_id, file_id, title, genre, year, description, is_premium = movie
+    print(f"Movie ID: {movie_id}, File ID: {file_id}, Title: {title}, Genre: {genre}, Year: {year}, Description: {description}, Is Premium: {is_premium}")
+    
     
     bot = Bot(token=BOT_TOKEN)
-    is_subscribed = await check_subscription_status(bot, message.from_user.id)
-    if is_premium and not is_subscribed:
-        await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
-        return
+    # is_subscribed = await check_subscription_status(bot, message.from_user.id)
+
+    # if is_premium and not is_subscribed:
+    #     await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
+    #     return
     
     conn = sqlite3.connect(DB_PATH)
+    print(92)
     c = conn.cursor()
     c.execute("UPDATE movies SET view_count = view_count + 1 WHERE id = ?", (movie_id,))
     c.execute("UPDATE users SET last_activity = ? WHERE user_id = ?",
@@ -247,6 +255,7 @@ async def handle_movie_code(message: Message, state: FSMContext):
         f"🎭 <b>Janr:</b> {genre}\n"
         f"📝 <b>Tavsif:</b>\n{description}\n\n"
     )
+    print(93)
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -254,6 +263,7 @@ async def handle_movie_code(message: Message, state: FSMContext):
             ]
         ]
     )
+    print(94)
     await bot.send_video(
         chat_id=message.chat.id,
         video=file_id,
