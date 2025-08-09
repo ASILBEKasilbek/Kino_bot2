@@ -85,26 +85,29 @@ async def process_movie_code(message: Message, state: FSMContext):
     await state.set_state(AddMovieForm.title)
     await message.reply("📽 Kino nomini kiriting:")
 
+# @admin_router.message(AddMovieForm.title)
+# async def process_movie_title(message: Message, state: FSMContext):
+#     await state.update_data(title=message.text.strip())
+#     await state.set_state(AddMovieForm.genre)
+#     await message.reply("🎭 Kino janrini kiriting (masalan, Action):")
+
+# @admin_router.message(AddMovieForm.genre)
+# async def process_movie_genre(message: Message, state: FSMContext):
+#     await state.update_data(genre=message.text.strip())
+#     await state.set_state(AddMovieForm.year)
+#     await message.reply("📅 Kino yilini kiriting (masalan, 2020):")
+
+# @admin_router.message(AddMovieForm.year)
+# async def process_movie_year(message: Message, state: FSMContext):
+    # try:
+    #     year = int(message.text.strip())
+    # except ValueError:
+    #     await message.reply("⚠️ Yil raqam bo‘lishi kerak!")
+    #     return
+    # await state.update_data(year=year)
 @admin_router.message(AddMovieForm.title)
 async def process_movie_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
-    await state.set_state(AddMovieForm.genre)
-    await message.reply("🎭 Kino janrini kiriting (masalan, Action):")
-
-@admin_router.message(AddMovieForm.genre)
-async def process_movie_genre(message: Message, state: FSMContext):
-    await state.update_data(genre=message.text.strip())
-    await state.set_state(AddMovieForm.year)
-    await message.reply("📅 Kino yilini kiriting (masalan, 2020):")
-
-@admin_router.message(AddMovieForm.year)
-async def process_movie_year(message: Message, state: FSMContext):
-    try:
-        year = int(message.text.strip())
-    except ValueError:
-        await message.reply("⚠️ Yil raqam bo‘lishi kerak!")
-        return
-    await state.update_data(year=year)
     await state.set_state(AddMovieForm.description)
     await message.reply("📜 Kino tavsifini kiriting:")
 
@@ -133,31 +136,37 @@ async def process_movie_premium(callback: CallbackQuery, state: FSMContext):
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
 async def process_movie_video(message: Message, state: FSMContext):
+    print(1)
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
-
     user_data = await state.get_data()
     movie_code = user_data["code"]
     title = user_data["title"]
-    genre = user_data["genre"]
-    year = user_data["year"]
+    # genre = user_data["genre"]
+    # year = user_data["year"]
     description = user_data["description"]
     is_premium = user_data["is_premium"]
-
-    # 🟢 Videoni kanalga yuborish
+    print(2)
+    if not message.video:
+        await message.answer("❌ Video topilmadi, iltimos, video sifatida yuboring.")
+        return
+    
+    print(1.5)
     sent_msg = await message.bot.send_video(
-        chat_id=CHANNEL_ID,
+        chat_id=-1002113893859,
         video=message.video.file_id,
-        caption=f"{title} ({year})\n🎬 Janr: {genre}\n📝 {description}",
+        caption=f"🎬 {title} \n📝 {description}",
         supports_streaming=True
     )
-
+    print(3)
     file_id = sent_msg.video.file_id  # Endi kanalga yuborilgan video file_id sini olamiz
 
     # 🔵 Bazaga yozish
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    genre= "Siz uchun"  # Agar janr kiritilmagan bo'lsa, "Unknown" deb yozamiz
+    year = "Faqat bizda"  # Agar yil kiritilmagan bo'lsa, "
     c.execute("INSERT INTO movies (file_id, movie_code, title, genre, year, description, is_premium) VALUES (?, ?, ?, ?, ?, ?, ?)",
               (file_id, movie_code, title, genre, year, description, is_premium))
     conn.commit()
