@@ -219,7 +219,15 @@ async def send_selected_movie(callback: CallbackQuery):
         await callback.message.answer("Kechirasiz, kino topilmadi.")
     await callback.answer()
 
-# Inline query handler
+
+
+# MarkdownV2 belgilarini qochirish uchun funksiya
+def escape_md(text: str) -> str:
+    escape_chars = r"_*[]()~`>#+-=|{}.!"
+    for ch in escape_chars:
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
 @video_router.inline_query()
 async def inline_query_handler(inline_query: InlineQuery):
     query = inline_query.query.strip()
@@ -238,24 +246,42 @@ async def inline_query_handler(inline_query: InlineQuery):
 
     for movie in movies:
         movie_id, file_id, movie_code, title, genre, year, description, is_premium, view_count = movie
+
         btn = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="🎬 Tomosha qilish", url=f"https://t.me/Sekret_kinoborbot?start={movie_code}")]]
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🎬 Tomosha qilish",
+                        url=f"https://t.me/Sekret_kinoborbot?start={movie_code}"
+                    )
+                ]
+            ]
         )
+
+        # Belgilarni qochirish
+        safe_title = escape_md(str(title))
+        safe_genre = escape_md(str(genre))
+        safe_description = escape_md(str(description))
+        safe_year = escape_md(str(year))
+        safe_views = escape_md(str(view_count))
+
+        message_text = (
+            f"*🎬 {safe_title}*\n"
+            f"📅 *Yil:* {safe_year}\n"
+            f"🎭 *Janr:* {safe_genre}\n"
+            f"📝 *Tavsif:* {safe_description}\n"
+            f"👁 *Ko'rilgan:* {safe_views} marta\n\n"
+            f"➡ Tomosha qilish uchun pastdagi tugmani bosing 👇"
+        )
+
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
                 title=f"{title} ({year})",
                 description=f"{genre} • {year}",
                 input_message_content=InputTextMessageContent(
-                    message_text=(
-                        f"*🎬 {title}*\n"
-                        f"📅 *Yil:* {year}\n"
-                        f"🎭 *Janr:* {genre}\n"
-                        f"📝 *Tavsif:* {description}\n"
-                        f"👁 *Ko'rilgan:* {view_count} marta\n\n"
-                        f"➡ Tomosha qilish uchun pastdagi tugmani bosing 👇"
-                    ),
-                    parse_mode="Markdown"
+                    message_text=message_text,
+                    parse_mode="MarkdownV2"
                 ),
                 reply_markup=btn
             )
@@ -266,7 +292,9 @@ async def inline_query_handler(inline_query: InlineQuery):
             InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
                 title="Hech narsa topilmadi",
-                input_message_content=InputTextMessageContent(message_text="Kechirasiz, siz so‘ragan film topilmadi.")
+                input_message_content=InputTextMessageContent(
+                    message_text="Kechirasiz, siz so‘ragan film topilmadi."
+                )
             )
         )
 
