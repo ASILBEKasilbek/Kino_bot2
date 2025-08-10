@@ -122,10 +122,12 @@ async def start_command(message: Message, state: FSMContext):
     all_joined = True
 
     for i, channel in enumerate(channels, 1):
+        print(channel)
         channel_id = str(channel)
         if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
             channel_id = f"-100{channel_id}"
         elif channel_id.startswith("@") or channel_id.startswith("https://t.me/"):
+            print(channel_id)
             pass
         else:
             continue
@@ -174,6 +176,7 @@ async def handle_check_subscription(callback: CallbackQuery, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = callback.from_user.id
     is_subscribed = await check_subscription_status(bot, user_id, channel="")
+    print(is_subscribed)
     username = callback.from_user.username or "No username"
 
     if is_subscribed:
