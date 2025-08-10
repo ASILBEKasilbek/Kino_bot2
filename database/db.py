@@ -158,6 +158,30 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+        # Watchlist jadvali
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS watchlist (
+            user_id INTEGER,
+            movie_id INTEGER,
+            added_date TEXT DEFAULT (datetime('now', 'localtime')),
+            PRIMARY KEY (user_id, movie_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (movie_id) REFERENCES movies(id)
+        )
+    ''')
+
+    # Reyting jadvali
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS ratings (
+            user_id INTEGER,
+            movie_id INTEGER,
+            rating INTEGER,
+            PRIMARY KEY (user_id, movie_id),
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (movie_id) REFERENCES movies(id)
+        )
+    ''')
+
 
 
     conn.commit()
