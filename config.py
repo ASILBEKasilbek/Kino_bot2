@@ -3,7 +3,7 @@ import os
 load_dotenv()
 
 BOT_TOKEN =os.getenv("BOT_TOKEN")  # Telegram bot tokeni
-ADMIN_IDS = [5306481482,7646223205,5902572920,1846386540,5705506626]  # Admin foydalanuvchi ID’lari
+ADMIN_IDS = [5306481482,7646223205,5902572920,1846386540,5705506626,7549237020]  # Admin foydalanuvchi ID’lari
 # CHANNEL_IDS = ['2052256946']5306481482
 #  # Majburiy obuna kanallari
 CHANNEL_IDS =['@kino_kodlar_t']

@@ -54,31 +54,42 @@ async def admin_panel_command(message: Message):
         [InlineKeyboardButton(text="👥 Foydalanuvchilarni boshqarish", callback_data="manage_users"),
          InlineKeyboardButton(text="🎬 Kinolarni boshqarish", callback_data="manage_movies")],
         [InlineKeyboardButton(text="⏰ Reklama rejalashtirish", callback_data="schedule_broadcast")],
-        [InlineKeyboardButton(text="Yulduzchalar", callback_data="stars")]
+        [InlineKeyboardButton(text="Yulduzchalar", callback_data="manage_stars")]
     ])
     await message.reply("🎛 Admin paneli:", reply_markup=keyboard)
 
+
+
+@admin_router.callback_query(F.data == "manage_stars")
+async def stars_callback(callback:CallbackQuery):
+    keyboards= InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Hamma yulduzchalar", callback_data="all_stars")],
+        [InlineKeyboardButton(text="Kinolar yulduzlari", callback_data="stars")]
+    ])
+    await callback.message.reply("🎛 Yulduzlar paneli:", reply_markup=keyboards)
+
+@admin_router.callback_query(F.data == "all_stars")
+async def stars_callback(callback:CallbackQuery):
+    from database.models import get_all_ratings
+    get_all_ratings = get_all_ratings();s=''
+    for i in get_all_ratings:
+        s+=f"{i[0]} obunachi {i[1]}-kinoga {i[2]} yulduzcha bosdi\n"
+    await callback.message.answer(s)
+
 @admin_router.callback_query(F.data == "stars")
 async def stars_callback(callback:CallbackQuery):
-    print(90)
-    # print(get_all_ratings())
     from database.models import get_all_ratings
     get_all_ratings = get_all_ratings()
-    print(type(get_all_ratings))
     ratings={}
     for i in get_all_ratings:
         try:
-            print(ratings[i[1]])
             ratings[i[1]] += i[2]
-            print(i[2])
         except KeyError:
             ratings[i[1]] = i[2]
-    print(ratings)
     s=''
     for i in ratings:
         s+=f"🌟 {i}- kodli kinodagi yulduzchalar soni jami: {ratings[i]}\n "
     await callback.message.answer(s)
-
     if not get_all_ratings:
         await callback.answer("🌟 Yulduzchalar hali qo‘shilmagan. Tez orada bo‘ladi!")
 
@@ -111,26 +122,6 @@ async def process_movie_code(message: Message, state: FSMContext):
     await state.set_state(AddMovieForm.title)
     await message.reply("📽 Kino nomini kiriting:")
 
-# @admin_router.message(AddMovieForm.title)
-# async def process_movie_title(message: Message, state: FSMContext):
-#     await state.update_data(title=message.text.strip())
-#     await state.set_state(AddMovieForm.genre)
-#     await message.reply("🎭 Kino janrini kiriting (masalan, Action):")
-
-# @admin_router.message(AddMovieForm.genre)
-# async def process_movie_genre(message: Message, state: FSMContext):
-#     await state.update_data(genre=message.text.strip())
-#     await state.set_state(AddMovieForm.year)
-#     await message.reply("📅 Kino yilini kiriting (masalan, 2020):")
-
-# @admin_router.message(AddMovieForm.year)
-# async def process_movie_year(message: Message, state: FSMContext):
-    # try:
-    #     year = int(message.text.strip())
-    # except ValueError:
-    #     await message.reply("⚠️ Yil raqam bo‘lishi kerak!")
-    #     return
-    # await state.update_data(year=year)
 @admin_router.message(AddMovieForm.title)
 async def process_movie_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
