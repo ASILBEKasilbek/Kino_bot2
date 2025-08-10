@@ -33,6 +33,7 @@ def is_valid_channel_id(channel_id: str) -> bool:
 # Manage channels command (only for admins)
 @channel_manage_router.message(Command("manage_channels"))
 async def manage_channels_command(message: Message):
+    print(message.from_user.id)
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
         return
