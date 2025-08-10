@@ -85,6 +85,7 @@ async def handle_channel_action(callback: CallbackQuery, state: FSMContext):
 # Process channel management (add or remove)
 @channel_manage_router.message(ManageChannelForm.channel_id)
 async def process_channel_management(message: Message, state: FSMContext):
+    print(message.from_user.id)
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
         await state.clear()
