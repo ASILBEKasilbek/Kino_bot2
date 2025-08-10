@@ -91,6 +91,16 @@ def get_average_rating(movie_id: int):
     avg = c.fetchone()[0]
     conn.close()
     return round(avg, 1) if avg else None
+
+def get_all_ratings():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM ratings")
+    rows = c.fetchall()
+    print(rows)
+    conn.close()
+    return rows
+
 def get_recommendations_by_genre(user_id: int, limit: int = 5):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()

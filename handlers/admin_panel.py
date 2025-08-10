@@ -13,6 +13,7 @@ import asyncio
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 
+
 admin_router = Router()
 
 class AddMovieForm(StatesGroup):
@@ -52,9 +53,34 @@ async def admin_panel_command(message: Message):
          InlineKeyboardButton(text="📣 Reklama yuborish", callback_data="send_ad")],
         [InlineKeyboardButton(text="👥 Foydalanuvchilarni boshqarish", callback_data="manage_users"),
          InlineKeyboardButton(text="🎬 Kinolarni boshqarish", callback_data="manage_movies")],
-        [InlineKeyboardButton(text="⏰ Reklama rejalashtirish", callback_data="schedule_broadcast")]
+        [InlineKeyboardButton(text="⏰ Reklama rejalashtirish", callback_data="schedule_broadcast")],
+        [InlineKeyboardButton(text="Yulduzchalar", callback_data="stars")]
     ])
     await message.reply("🎛 Admin paneli:", reply_markup=keyboard)
+
+@admin_router.callback_query(F.data == "stars")
+async def stars_callback(callback:CallbackQuery):
+    print(90)
+    # print(get_all_ratings())
+    from database.models import get_all_ratings
+    get_all_ratings = get_all_ratings()
+    print(type(get_all_ratings))
+    ratings={}
+    for i in get_all_ratings:
+        try:
+            print(ratings[i[1]])
+            ratings[i[1]] += i[2]
+            print(i[2])
+        except KeyError:
+            ratings[i[1]] = i[2]
+    print(ratings)
+    s=''
+    for i in ratings:
+        s+=f"🌟 {i}- kodli kinodagi yulduzchalar soni jami: {ratings[i]}\n "
+    await callback.message.answer(s)
+
+    if not get_all_ratings:
+        await callback.answer("🌟 Yulduzchalar hali qo‘shilmagan. Tez orada bo‘ladi!")
 
 @admin_router.callback_query(F.data == "add_movie")
 async def add_movie_callback(callback: CallbackQuery, state: FSMContext):
