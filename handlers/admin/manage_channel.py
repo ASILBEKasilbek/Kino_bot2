@@ -33,6 +33,7 @@ def is_valid_channel_id(channel_id: str) -> bool:
 # Manage channels command (only for admins)
 @channel_manage_router.message(Command("manage_channels"))
 async def manage_channels_command(message: Message):
+    await message.reply(f"{message.from_user.id}")
     print(message.from_user.id)
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
@@ -87,6 +88,8 @@ async def handle_channel_action(callback: CallbackQuery, state: FSMContext):
 @channel_manage_router.message(ManageChannelForm.channel_id)
 async def process_channel_management(message: Message, state: FSMContext):
     print(message.from_user.id)
+
+    await message.reply(f"{message.from_user.id}")
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
         await state.clear()
