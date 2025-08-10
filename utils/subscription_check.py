@@ -15,11 +15,9 @@ async def check_subscription_status(bot: Bot, user_id: int, channel: str = "") -
     finally:
         conn.close()
 
-    print(f"👤 Foydalanuvchi {user_id} uchun kanallar: {channel_ids}")
 
     for ch in channel_ids:
         ch_str = str(ch).strip()
-        print(f"🔍 Kanal tekshirilmoqda: {ch_str}")
 
         # 1️⃣ Agar kanal zayavka link bo'lsa (https://t.me/+...)
         # if ch_str.startswith("https://t.me/+"):
@@ -39,16 +37,11 @@ async def check_subscription_status(bot: Bot, user_id: int, channel: str = "") -
 
             member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
             if member.status not in ("member", "administrator", "creator"):
-                print(f"❌ {user_id} obuna emas: {ch_str}")
                 return False
-            else:
-                print(f"✅ {user_id} kanalga obuna: {ch_str}")
 
         except TelegramAPIError as e:
-            print(f"⚠️ Telegram API xatoligi: {e} — kanal: {ch_str}")
             return True  # API muammosida bloklamaymiz
         except Exception as e:
-            print(f"⚠️ Xatolik: {e}")
             return False
 
     return True
@@ -80,10 +73,7 @@ async def confirm_join(bot: Bot, user_id: int, channel: str) -> bool:
         )
         conn.commit()
     except sqlite3.Error as e:
-        print(f"❌ Database xatosi: {e}")
         return False
     finally:
         conn.close()
-
-    print(f"👤 Foydalanuvchi {user_id} kanal {channel} uchun 'Join' ni tasdiqladi")
     return True

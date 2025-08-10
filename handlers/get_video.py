@@ -38,12 +38,23 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="🔎 Qidiruv", switch_inline_query_current_chat=""),
-                InlineKeyboardButton(text="Top 5 kinolar", callback_data="top_5_kinolar")
+                InlineKeyboardButton(text="🔍 Qidirish", switch_inline_query_current_chat=""),
+                InlineKeyboardButton(text="🎯 Top 5 kinolar", callback_data="top_5_kinolar")
             ],
-            [InlineKeyboardButton(text="📢 Barcha kinolar", url="https://t.me/erotika_kinolar_hikoyalar")]
+            [
+                InlineKeyboardButton(text="🎬 Bugungi tavsiya", callback_data="kunlik_film_tavsiyasi"),
+                InlineKeyboardButton(text="🏆 Haftaning eng zo‘ri", callback_data="haftalik_film_tavsiyasi"),
+            ],
+            [
+                InlineKeyboardButton(text="🌟 Oyning TOP filmi", callback_data="oylik_film_tavsiyasi"),
+                InlineKeyboardButton(text="🎲 Tasodifiy kino", callback_data="tasodifiy_kinolar"),
+            ],
+            [
+                InlineKeyboardButton(text="📢 Barcha kinolar 📽", url="https://t.me/erotika_kinolar_hikoyalar")
+            ]
         ]
     )
+
     await message.answer(
         f"🎬 <b>Sekret KinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
         "📽 Bu yerda siz sirli va noyob kinolarni topasiz — qidiruv, tavsiyalar, maxsus to‘plamlar va boshqa ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
@@ -122,12 +133,10 @@ async def start_command(message: Message, state: FSMContext):
     all_joined = True
 
     for i, channel in enumerate(channels, 1):
-        print(channel)
         channel_id = str(channel)
         if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
             channel_id = f"-100{channel_id}"
         elif channel_id.startswith("@") or channel_id.startswith("https://t.me/"):
-            print(channel_id)
             pass
         else:
             continue
@@ -176,7 +185,6 @@ async def handle_check_subscription(callback: CallbackQuery, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = callback.from_user.id
     is_subscribed = await check_subscription_status(bot, user_id, channel="")
-    print(is_subscribed)
     username = callback.from_user.username or "No username"
 
     if is_subscribed:
@@ -195,13 +203,99 @@ async def handle_join_click(callback: CallbackQuery):
         show_alert=True
     )
 
-# Handle top 5 movies
+
+
+
+# 📌 Top 5 kinolar
 @video_router.callback_query(F.data == "top_5_kinolar")
 async def top_5_handler(callback: CallbackQuery):
     top_movies = get_top_movies(5)
-    buttons = [[InlineKeyboardButton(text=movie['title'], callback_data=f"movie_{movie['id']}")] for movie in top_movies]
+    if not top_movies:
+        await callback.message.answer("❌ Hozircha top kinolar yo‘q.")
+        return
+
+    buttons = [
+        [InlineKeyboardButton(text=f"{i+1}. {movie['title']}", callback_data=f"movie_{movie['id']}")]
+        for i, movie in enumerate(top_movies)
+    ]
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-    await callback.message.answer("🎬 Top 5 kinolar:", reply_markup=keyboard)
+    await callback.message.answer("🎯 Top 5 kinolar:", reply_markup=keyboard)
+    await callback.answer()
+
+
+# 📌 Bugungi tavsiya
+@video_router.callback_query(F.data == "kunlik_film_tavsiyasi")
+async def daily_movie(callback: CallbackQuery):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM movies ORDER BY RANDOM() LIMIT 1")
+    movie = c.fetchone()
+    conn.close()
+
+    if not movie:
+        await callback.message.answer("❌ Kino topilmadi.")
+        return
+
+    buttons = [[InlineKeyboardButton(text=movie[1], callback_data=f"movie_{movie[0]}")]]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await callback.message.answer("🎬 Bugungi tavsiya:", reply_markup=keyboard)
+    await callback.answer()
+
+
+# 📌 Haftaning eng zo‘ri
+@video_router.callback_query(F.data == "haftalik_film_tavsiyasi")
+async def weekly_best(callback: CallbackQuery):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM movies ORDER BY view_count DESC LIMIT 1")
+    movie = c.fetchone()
+    conn.close()
+
+    if not movie:
+        await callback.message.answer("❌ Kino topilmadi.")
+        return
+
+    buttons = [[InlineKeyboardButton(text=movie[1], callback_data=f"movie_{movie[0]}")]]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await callback.message.answer("🏆 Haftaning eng zo‘ri:", reply_markup=keyboard)
+    await callback.answer()
+
+
+# 📌 Oyning TOP filmi
+@video_router.callback_query(F.data == "oylik_film_tavsiyasi")
+async def monthly_best(callback: CallbackQuery):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM movies ORDER BY view_count DESC LIMIT 1")
+    movie = c.fetchone()
+    conn.close()
+
+    if not movie:
+        await callback.message.answer("❌ Kino topilmadi.")
+        return
+
+    buttons = [[InlineKeyboardButton(text=movie[1], callback_data=f"movie_{movie[0]}")]]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await callback.message.answer("🌟 Oyning TOP filmi:", reply_markup=keyboard)
+    await callback.answer()
+
+
+# 📌 Tasodifiy kino
+@video_router.callback_query(F.data == "tasodifiy_kinolar")
+async def random_movie(callback: CallbackQuery):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, title FROM movies ORDER BY RANDOM() LIMIT 1")
+    movie = c.fetchone()
+    conn.close()
+
+    if not movie:
+        await callback.message.answer("❌ Kino topilmadi.")
+        return
+
+    buttons = [[InlineKeyboardButton(text=movie[1], callback_data=f"movie_{movie[0]}")]]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await callback.message.answer("🎲 Tasodifiy kino:", reply_markup=keyboard)
     await callback.answer()
 
 # Handle selected movie
@@ -221,8 +315,6 @@ async def send_selected_movie(callback: CallbackQuery):
     else:
         await callback.message.answer("Kechirasiz, kino topilmadi.")
     await callback.answer()
-
-
 
 # MarkdownV2 belgilarini qochirish uchun funksiya
 def escape_md(text: str) -> str:
