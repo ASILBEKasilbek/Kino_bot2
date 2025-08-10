@@ -33,8 +33,6 @@ def is_valid_channel_id(channel_id: str) -> bool:
 # Manage channels command (only for admins)
 @channel_manage_router.message(Command("manage_channels"))
 async def manage_channels_command(message: Message):
-    await message.reply(f"{message.from_user.id}")
-    print(message.from_user.id)
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
         return
@@ -61,14 +59,12 @@ async def handle_channel_action(callback: CallbackQuery, state: FSMContext):
     await state.update_data(action=action)
 
     if action == "list_channels":
-        print(9)
         channels = get_all_channels()
-        print(channels)
         if not channels:
             await callback.message.reply("📭 Hozirda hech qanday kanal yo‘q.")
         else:
             channel_list = "\n".join(
-                f"🔹 {c['channel_id']} (Qo‘shilgan: {c['added_at']})" for c in channels
+                f"🔹 {c}" for c in channels
             )
             await callback.message.reply(f"📋 Faol kanallar:\n{channel_list}")
         await callback.message.delete()
@@ -84,48 +80,27 @@ async def handle_channel_action(callback: CallbackQuery, state: FSMContext):
     await callback.message.delete()
     await callback.answer()
 
-# Process channel management (add or remove)
 @channel_manage_router.message(ManageChannelForm.channel_id)
 async def process_channel_management(message: Message, state: FSMContext):
-    print(message.from_user.id)
-
-    await message.reply(f"{message.from_user.id}")
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
-        await state.clear()
-        return
-
     channel_id = message.text.strip()
     data = await state.get_data()
     action = data.get("action", "add_channel")
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+
     gamification = Gamification()
 
-    # Validate channel ID
-    if not is_valid_channel_id(channel_id):
-        await message.reply("❌ Noto‘g‘ri kanal ID formati! @KanalNomi, https://t.me/KanalNomi yoki -100123456789 shaklida kiriting.")
-        await state.clear()
-        return
+    if action == "add_channel":
+        c.execute("INSERT OR IGNORE INTO channels (channel_id) VALUES (?)", (channel_id,))
+        conn.commit()
+        new_xp = gamification.add_xp(message.from_user.id, "add_channel")
+        await message.reply(f"✅ Kanal ({channel_id}) qo‘shildi!\n📊 Yangi XP: {new_xp}")
+    else:
+        c.execute("DELETE FROM channels WHERE channel_id = ?", (channel_id,))
+        conn.commit()
+        new_xp = gamification.add_xp(message.from_user.id, "remove_channel")
+        await message.reply(f"✅ Kanal ({channel_id}) o‘chirildi!\n📊 Yangi XP: {new_xp}")
 
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        if action == "add_channel":
-            if channel_exists(channel_id):
-                await message.reply(f"⚠️ Kanal ({channel_id}) allaqachon mavjud!")
-            else:
-                c.execute(
-                    "INSERT INTO channels (channel_id, added_at) VALUES (?, ?)",
-                    (channel_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                )
-                conn.commit()
-                new_xp = gamification.add_xp(message.from_user.id, "add_channel")
-                await message.reply(f"✅ Kanal ({channel_id}) qo‘shildi!\n📊 Yangi XP: {new_xp}")
-        else:
-            if not channel_exists(channel_id):
-                await message.reply(f"⚠️ Kanal ({channel_id}) mavjud emas!")
-            else:
-                c.execute("DELETE FROM channels WHERE channel_id = ?", (channel_id,))
-                conn.commit()
-                new_xp = gamification.add_xp(message.from_user.id, "remove_channel")
-                await message.reply(f"✅ Kanal ({channel_id}) o‘chirildi!\n📊 Yangi XP: {new_xp}")
-
+    conn.close()
     await state.clear()
