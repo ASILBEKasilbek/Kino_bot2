@@ -47,7 +47,7 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
             ],
             [
                 InlineKeyboardButton(text="🌟 Oyning TOP filmi", callback_data="oylik_film_tavsiyasi"),
-                InlineKeyboardButton(text="🎲 Tasodifiy kino", callback_data="tasodifiy_kinolar"),
+                InlineKeyboardButton(text="🎲 Tasodifiy 7 kino", callback_data="tasodifiy_kinolar"),
             ],
             [
                 InlineKeyboardButton(text="📢 Barcha kinolar 📽", url="https://t.me/erotika_kinolar_hikoyalar")
@@ -285,18 +285,24 @@ async def monthly_best(callback: CallbackQuery):
 async def random_movie(callback: CallbackQuery):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT id, title FROM movies ORDER BY RANDOM() LIMIT 1")
-    movie = c.fetchone()
+    c.execute("SELECT id, title FROM movies ORDER BY RANDOM() LIMIT 7")
+    movies = c.fetchall()
     conn.close()
 
-    if not movie:
+    if not movies:
         await callback.message.answer("❌ Kino topilmadi.")
         return
 
-    buttons = [[InlineKeyboardButton(text=movie[1], callback_data=f"movie_{movie[0]}")]]
+    # 7 ta kino tugmasini yaratish
+    buttons = [
+        [InlineKeyboardButton(text=f"{i+1}. {movie[1]}", callback_data=f"movie_{movie[0]}")]
+        for i, movie in enumerate(movies)
+    ]
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-    await callback.message.answer("🎲 Tasodifiy kino:", reply_markup=keyboard)
+    await callback.message.answer("🎲 Tasodifiy 7 ta kino:", reply_markup=keyboard)
     await callback.answer()
+
 
 # Handle selected movie
 @video_router.callback_query(F.data.startswith("movie_"))
