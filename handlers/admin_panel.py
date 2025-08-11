@@ -153,7 +153,6 @@ async def process_movie_premium(callback: CallbackQuery, state: FSMContext):
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
 async def process_movie_video(message: Message, state: FSMContext):
-    print(1)
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
@@ -164,19 +163,15 @@ async def process_movie_video(message: Message, state: FSMContext):
     # year = user_data["year"]
     description = user_data["description"]
     is_premium = user_data["is_premium"]
-    print(2)
     if not message.video:
         await message.answer("❌ Video topilmadi, iltimos, video sifatida yuboring.")
         return
-    
-    print(1.5)
     sent_msg = await message.bot.send_video(
-        chat_id=-1002113893859,
+        chat_id=CHANNEL_ID,
         video=message.video.file_id,
         caption=f"🎬 {title} \n📝 {description}",
         supports_streaming=True
     )
-    print(3)
     file_id = sent_msg.video.file_id  # Endi kanalga yuborilgan video file_id sini olamiz
 
     # 🔵 Bazaga yozish
@@ -188,8 +183,6 @@ async def process_movie_video(message: Message, state: FSMContext):
               (file_id, movie_code, title, genre, year, description, is_premium))
     conn.commit()
     conn.close()
-
-    # 🧩 Gamification XP
     gamification = Gamification()
     new_xp = gamification.add_xp(message.from_user.id, "add_movie")
 
