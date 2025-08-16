@@ -181,7 +181,7 @@ async def process_movie_video(message: Message, state: FSMContext):
                 f"🔢 Kod: {movie_code}\n"
                 f"📜 {description}\n"
                 f"🎭 {genre} | 📅 {year}"
-            )
+            ),
 
         supports_streaming=True
     )
