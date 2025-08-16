@@ -92,6 +92,22 @@ async def stars_callback(callback:CallbackQuery):
     await callback.message.answer(s)
     if not get_all_ratings:
         await callback.answer("🌟 Yulduzchalar hali qo‘shilmagan. Tez orada bo‘ladi!")
+import random
+
+# Janrlar ro'yxati
+GENRES = ["Drama", "Komediya", "Fantastika", "Sarguzasht", "Qo'rqinchli", "Romantik", "Aksiya"]
+# Yillar ro'yxati
+YEARS = ["2023", "2024", "2025", "2022", "2021", "2019"]
+# Tavsiflar ro'yxati
+DESCRIPTIONS = [
+    "🔥 Eng zo'r yangi kino!",
+    "🎬 Faqat bizning kanalda!",
+    "💎 Tomosha qilishni boy bermang!",
+    "⭐ Bu kinoni hamma kutgan edi!",
+    "🎥 Zavq bilan tomosha qiling!",
+    "🚀 Hayajonli voqealar bilan to‘la film!"
+]
+
 
 @admin_router.callback_query(F.data == "add_movie")
 async def add_movie_callback(callback: CallbackQuery, state: FSMContext):
@@ -100,89 +116,87 @@ async def add_movie_callback(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id not in ADMIN_IDS:
         await callback.message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
         return
-    await state.set_state(AddMovieForm.code)
-    await callback.message.reply("🎬 Kino kodi kiriting (masalan, KINO987):")
+
+    # Oxirgi id ni olib, yangi kod tayyorlaymiz
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT MAX(id) FROM movies")
+    last_id = c.fetchone()[0] or 0
+    conn.close()
+
+    new_code = f"{last_id + 1}"
+    await state.update_data(code=new_code)
+
+    # Keyingi bosqichga o‘tamiz
+    await state.set_state(AddMovieForm.title)
+    await callback.message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
+
     try:
         await callback.message.delete()
     except Exception as e:
         logging.warning(f"Failed to delete message: {e}")
 
-@admin_router.message(AddMovieForm.code)
-async def process_movie_code(message: Message, state: FSMContext):
-    movie_code = message.text.strip().upper()
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT movie_code FROM movies WHERE movie_code = ?", (movie_code,))
-    if c.fetchone():
-        await message.reply("⚠️ Bu kino kodi allaqachon mavjud!")
-        conn.close()
-        return
-    conn.close()
-    await state.update_data(code=movie_code)
-    await state.set_state(AddMovieForm.title)
-    await message.reply("📽 Kino nomini kiriting:")
 
 @admin_router.message(AddMovieForm.title)
 async def process_movie_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text.strip())
-    await state.set_state(AddMovieForm.description)
-    await message.reply("📜 Kino tavsifini kiriting:")
 
-@admin_router.message(AddMovieForm.description)
-async def process_movie_description(message: Message, state: FSMContext):
-    await state.update_data(description=message.text.strip())
-    await state.set_state(AddMovieForm.is_premium)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Premium", callback_data="premium_1"),
-         InlineKeyboardButton(text="🆓 Bepul", callback_data="premium_0")]
-    ])
-    await message.reply("💎 Kino premium bo‘lsinmi?", reply_markup=keyboard)
+    # Tavsifni random tanlaymiz
+    description = random.choice(DESCRIPTIONS)
+    await state.update_data(description=description)
 
-@admin_router.callback_query(F.data.startswith("premium_"))
-async def process_movie_premium(callback: CallbackQuery, state: FSMContext):
-    logging.info(f"premium callback triggered by user_id={callback.from_user.id}, callback_data={callback.data}")
-    
-    is_premium = int(callback.data.split("_")[1])
-    await state.update_data(is_premium=is_premium)
+    # Janr va yilni random tanlaymiz
+    genre = random.choice(GENRES)
+    year = random.choice(YEARS)
+    await state.update_data(genre=genre, year=year)
+
+    # Doim bepul
+    await state.update_data(is_premium=0)
+
+    # Keyingi bosqich: video
     await state.set_state(AddMovieForm.video)
-    await callback.message.reply("🎥 Kino videosini yuboring:")
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logging.warning(f"Failed to delete message: {e}")
+    await message.reply("🎥 Kino videosini yuboring:")
+
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
 async def process_movie_video(message: Message, state: FSMContext):
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
+
     user_data = await state.get_data()
     movie_code = user_data["code"]
     title = user_data["title"]
-    # genre = user_data["genre"]
-    # year = user_data["year"]
     description = user_data["description"]
+    genre = user_data["genre"]
+    year = user_data["year"]
     is_premium = user_data["is_premium"]
-    if not message.video:
-        await message.answer("❌ Video topilmadi, iltimos, video sifatida yuboring.")
-        return
+
+    # Kanalga video yuborish
     sent_msg = await message.bot.send_video(
         chat_id=CHANNEL_ID,
         video=message.video.file_id,
-        caption=f"🎬 {title} \n📝 {description}",
+        caption = (
+                f"🎬 {title}\n"
+                f"🔢 Kod: {movie_code}\n"
+                f"📜 {description}\n"
+                f"🎭 {genre} | 📅 {year}"
+            )
+
         supports_streaming=True
     )
-    file_id = sent_msg.video.file_id  # Endi kanalga yuborilgan video file_id sini olamiz
+    file_id = sent_msg.video.file_id
 
     # 🔵 Bazaga yozish
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    genre= "Siz uchun"  # Agar janr kiritilmagan bo'lsa, "Unknown" deb yozamiz
-    year = "Faqat bizda"  # Agar yil kiritilmagan bo'lsa, "
-    c.execute("INSERT INTO movies (file_id, movie_code, title, genre, year, description, is_premium) VALUES (?, ?, ?, ?, ?, ?, ?)",
-              (file_id, movie_code, title, genre, year, description, is_premium))
+    c.execute("""
+        INSERT INTO movies (file_id, movie_code, title, genre, year, description, is_premium) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (file_id, movie_code, title, genre, year, description, is_premium))
     conn.commit()
     conn.close()
+
     gamification = Gamification()
     new_xp = gamification.add_xp(message.from_user.id, "add_movie")
 
