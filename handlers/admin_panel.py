@@ -159,7 +159,7 @@ async def process_movie_title(message: Message, state: FSMContext):
 
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
-async def process_movie_video(message: Message, state: FSMContext):
+async def process_movie_video(message: Message, state: FSMContext): 
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
@@ -200,7 +200,7 @@ async def process_movie_video(message: Message, state: FSMContext):
     gamification = Gamification()
     new_xp = gamification.add_xp(message.from_user.id, "add_movie")
 
-    await message.reply(f"🎉 Kino kanalga yuklandi: {title}\n📊 Yangi XP: {new_xp}")
+    await message.reply(f"🎉 Kino kanalga yuklandi yana yuklash uchun /admin bosing: {title}\n📊 Yangi XP: {new_xp}")
     await state.clear()
 
 @admin_router.callback_query(F.data == "block_user")
