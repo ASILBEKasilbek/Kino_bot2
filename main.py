@@ -26,7 +26,6 @@ from aiogram import types
 async def set_default_commands(bot: Bot):
     commands = [
         types.BotCommand(command="start", description="⚪️ Botni ishga tushirish"),
-        #types.BotCommand(command="get_video", description="🎬 Kino kodini yuborish"),
         types.BotCommand(command="admin", description="🎛 Admin paneli")
     ]
     

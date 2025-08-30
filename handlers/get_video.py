@@ -56,7 +56,7 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
     )
 
     await message.answer(
-        f"🎬 <b>Sekret KinoBot</b> ga xush kelibsiz, <b>{username}</b>!\n\n"
+        f"🎬 <b>Sekret KinoBot</b>ga xush kelibsiz, <b>{username}</b>!\n\n"
         "📽 Bu yerda siz sirli va noyob kinolarni topasiz — qidiruv, tavsiyalar, maxsus to‘plamlar va boshqa ko‘plab imkoniyatlar sizni kutmoqda!\n\n"
         "🧾 <i>Iltimos, kino kodini yuboring yoki quyidagi menyudan birini tanlang:</i>",
         parse_mode="HTML",
@@ -64,12 +64,32 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
     )
     await state.set_state(MovieStates.waiting_for_movie_code)
 
-# Helper function to handle movie code
+# async def _handle_movie_code(message: Message, bot: Bot):
+#     text = (message.text or "").strip()
+
+#     # 1) Agar matn ichida #CODE:xxx bo‘lsa
+#     match = re.search(r"#CODE:(\w+)", text)
+#     if match:
+#         movie_code = match.group(1)
+#     else:
+#         movie_code = text
+
+#     # Kod bo‘yicha kinoni olish
+#     movie = get_movie_by_code(movie_code)
+#     if not movie:
+#         await message.reply("⚠️ Kino topilmadi!")
+#         return
 async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
+    text = (message.text or "").strip()
+    match = re.search(r"KOD:\s*(\w+)", text)
+    if match:
+        kod = match.group(1)
     movie = get_movie_by_code(movie_code)
     if not movie:
-        await message.reply("⚠️ Kino topilmadi!")
-        return
+        movie = get_movie_by_code(kod)
+        if not movie:
+            await message.reply("⚠️ Kino topilmadi!")
+            return
 
     movie_id, file_id, title, genre, year, description, is_premium = movie
     user_id = message.from_user.id
@@ -202,7 +222,6 @@ async def handle_join_click(callback: CallbackQuery):
         "✅ Join bosilgan deb qayd etildi" if success else "❌ Xatolik yuz berdi",
         show_alert=True
     )
-
 
 
 
@@ -372,7 +391,8 @@ async def inline_query_handler(inline_query: InlineQuery):
             f"🎭 *Janr:* {safe_genre}\n"
             f"📝 *Tavsif:* {safe_description}\n"
             f"👁 *Ko'rilgan:* {safe_views} marta\n\n"
-            f"➡ Tomosha qilish uchun pastdagi tugmani bosing 👇"
+            f"➡ Tomosha qilish uchun pastdagi tugmani bosing 👇\n"
+            f"🎟 KOD: {movie_code}"
         )
 
         results.append(
