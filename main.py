@@ -22,15 +22,31 @@ from database.db import init_db
 from utils.logger import Logger
 from marketing.landing_page import landing_page_router
 from aiogram import types
+ADMIN_IDS = [5306481482,7646223205,5902572920,1846386540,5705506626,7549237020,8297316764]
+ADMIN_IDS = [5306481482, 7646223205, 5902572920, 1846386540, 5705506626, 7549237020, 8297316764]
 
 async def set_default_commands(bot: Bot):
-    commands = [
+    # Oddiy foydalanuvchilar uchun komandalar
+    user_commands = [
         types.BotCommand(command="start", description="⚪️ Botni ishga tushirish"),
-        types.BotCommand(command="admin", description="🎛 Admin paneli")
+        types.BotCommand(command="admin", description="🎛 Admin paneli"),
     ]
-    
-    await bot.set_my_commands(commands)
 
+    # Adminlar uchun komandalar
+    admin_commands = user_commands + [
+        types.BotCommand(command="k", description="🎬 Kino qo‘shish"),
+    ]
+
+    # Har bir admin uchun alohida o‘rnatiladi
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.set_my_commands(admin_commands, scope=types.BotCommandScopeChat(chat_id=admin_id))
+            print(f"✅ Admin komandalar o‘rnatildi: {admin_id}")
+        except Exception as e:
+            print(f"❌ Admin {admin_id} uchun komandalar o‘rnatilmadi: {e}")
+
+    # Qolgan barcha foydalanuvchilar uchun umumiy komandalar
+    await bot.set_my_commands(user_commands)
 
 async def main():
     bot = Bot(token=BOT_TOKEN)

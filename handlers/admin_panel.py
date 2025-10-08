@@ -109,12 +109,12 @@ DESCRIPTIONS = [
 ]
 
 
-@admin_router.callback_query(F.data == "add_movie")
-async def add_movie_callback(callback: CallbackQuery, state: FSMContext):
-    logging.info(f"add_movie callback triggered by user_id={callback.from_user.id}, callback_data={callback.data}")
-    
-    if callback.from_user.id not in ADMIN_IDS:
-        await callback.message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
+@admin_router.message(Command("k"))
+async def add_movie_handler(message: types.Message, state: FSMContext):
+    logging.info(f"add_movie triggered by user_id={message.from_user.id}")
+
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
         return
 
     # Oxirgi id ni olib, yangi kod tayyorlaymiz
@@ -129,12 +129,7 @@ async def add_movie_callback(callback: CallbackQuery, state: FSMContext):
 
     # Keyingi bosqichga o‘tamiz
     await state.set_state(AddMovieForm.title)
-    await callback.message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
-
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logging.warning(f"Failed to delete message: {e}")
+    await message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
 
 
 @admin_router.message(AddMovieForm.title)
