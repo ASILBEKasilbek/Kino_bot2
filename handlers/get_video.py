@@ -64,21 +64,6 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
     )
     await state.set_state(MovieStates.waiting_for_movie_code)
 
-# async def _handle_movie_code(message: Message, bot: Bot):
-#     text = (message.text or "").strip()
-
-#     # 1) Agar matn ichida #CODE:xxx bo‘lsa
-#     match = re.search(r"#CODE:(\w+)", text)
-#     if match:
-#         movie_code = match.group(1)
-#     else:
-#         movie_code = text
-
-#     # Kod bo‘yicha kinoni olish
-#     movie = get_movie_by_code(movie_code)
-#     if not movie:
-#         await message.reply("⚠️ Kino topilmadi!")
-#         return
 async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     text = (message.text or "").strip()
     match = re.search(r"KOD:\s*(\w+)", text)
@@ -98,10 +83,10 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     user_id = message.from_user.id
 
     # Check subscription for premium content
-    is_subscribed = await check_subscription_status(bot, user_id, channel="")
-    if is_premium and not is_subscribed:
-        await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
-        return
+    # is_subscribed = await check_subscription_status(bot, user_id, channel="")
+    # if is_premium and not is_subscribed:
+    #     await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
+    #     return
 
     # Update statistics
     with sqlite3.connect(DB_PATH) as conn:
@@ -134,64 +119,79 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
         protect_content=True
     )
 
-# Start command handler
+
 @video_router.message(Command("start"))
 async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
-    with sqlite3.connect(DB_PATH) as conn:
-        c = conn.cursor()
-        c.execute(
-            "INSERT OR IGNORE INTO users (user_id, username, registration_date, last_activity) VALUES (?, ?, ?, ?)",
-            (user_id, username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        )
-        conn.commit()
 
-    # Check subscription status
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+    # 🔎 Obuna tekshiramiz
     channels = get_all_channels()
     all_joined = True
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
 
     for i, channel in enumerate(channels, 1):
         channel_id = str(channel)
         if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
             channel_id = f"-100{channel_id}"
-        elif channel_id.startswith("@") or channel_id.startswith("https://t.me/"):
-            pass
-        else:
-            continue
-        print(user_id,channel_id)
+
         is_joined = await check_subscription_status(bot, user_id, channel_id)
-        print(is_joined)
         if not is_joined:
-            print(12)
             all_joined = False
             url = await _get_channel_url(bot, channel_id)
             if url:
                 keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=url)])
 
     if not all_joined:
-        keyboard.inline_keyboard.append([InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")])
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")]
+        )
         await message.reply(
-            f"👋 Xush kelibsiz, {username}!\n"
-            f"🎬 Kino olish uchun quyidagi kanallarga obuna bo‘ling:",
+            "❌ Avval quyidagi kanallarga obuna bo‘ling:",
             reply_markup=keyboard
         )
         return
 
-    args = message.text.split(maxsplit=1)
-    if len(args) > 1:
-        await _handle_movie_code(message, args[1].strip().upper(), bot)
-        return
-
-    # Show main menu
+    # ✅ Agar foydalanuvchi obuna bo‘lgan bo‘lsa — asosiy menyuni ko‘rsatamiz
     await _show_main_menu(message, username, state)
 
-# Handle movie code input
+
+# Har qanday matn (kino kodi) uchun handler
 @video_router.message(MovieStates.waiting_for_movie_code)
 async def handle_movie_code(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
+    user_id = message.from_user.id
+    username = message.from_user.username or "No username"
+
+    # 🔎 Avval obuna tekshiramiz
+    channels = get_all_channels()
+    all_joined = True
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+
+    for i, channel in enumerate(channels, 1):
+        channel_id = str(channel)
+        if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
+            channel_id = f"-100{channel_id}"
+
+        is_joined = await check_subscription_status(bot, user_id, channel_id)
+        if not is_joined:
+            all_joined = False
+            url = await _get_channel_url(bot, channel_id)
+            if url:
+                keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=url)])
+
+    if not all_joined:
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")]
+        )
+        await message.reply(
+            "❌ Avval quyidagi kanallarga obuna bo‘ling:",
+            reply_markup=keyboard
+        )
+        return
+
+    # ✅ Obuna bo‘lsa — kino kodini ishlaymiz
     await _handle_movie_code(message, message.text.strip().upper(), bot)
 
 # Handle get video callback
