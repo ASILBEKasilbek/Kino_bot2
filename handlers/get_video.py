@@ -89,11 +89,8 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
         await message.reply("⚠️ Kino topilmadi!")
         return 
     if not movie:
-        print(11.7,kod)
         movie = get_movie_by_code(movie_code)
-        print(13,movie)
         if not movie:
-            print(14)
             await message.reply("⚠️ Kino topilmadi!")
             return
 
@@ -105,7 +102,6 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     if is_premium and not is_subscribed:
         await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
         return
-    print(78)
 
     # Update statistics
     with sqlite3.connect(DB_PATH) as conn:
@@ -129,7 +125,6 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
             ]
         ]
     )
-    print(89)
     await bot.send_video(
         chat_id=message.chat.id,
         video=file_id,
@@ -145,8 +140,6 @@ async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
-    
-    # Save user to database
     with sqlite3.connect(DB_PATH) as conn:
         c = conn.cursor()
         c.execute(
@@ -168,9 +161,11 @@ async def start_command(message: Message, state: FSMContext):
             pass
         else:
             continue
-
+        print(user_id,channel_id)
         is_joined = await check_subscription_status(bot, user_id, channel_id)
+        print(is_joined)
         if not is_joined:
+            print(12)
             all_joined = False
             url = await _get_channel_url(bot, channel_id)
             if url:
@@ -185,7 +180,6 @@ async def start_command(message: Message, state: FSMContext):
         )
         return
 
-    # Handle movie code from /start command
     args = message.text.split(maxsplit=1)
     if len(args) > 1:
         await _handle_movie_code(message, args[1].strip().upper(), bot)
