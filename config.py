@@ -14,3 +14,4 @@ CLICK_TOKEN = "YOUR_CLICK_TOKEN"  # Click to‘lov tizimi tokeni
 APELSIN_TOKEN = "YOUR_APELSIN_TOKEN"  # Apelsin to‘lov tizimi tokeni
 KANAL=2052256946
 CHANNEL_ID = -1002791951751  # Kanal ID manfiy belgili bo'lishi kerak
+CHANNEL_ID=-1001961525118

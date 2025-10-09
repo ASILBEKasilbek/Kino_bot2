@@ -191,7 +191,6 @@ async def process_movie_video(message: Message, state: FSMContext):
     """, (file_id, movie_code, title, genre, year, description, is_premium))
     conn.commit()
     conn.close()
-
     gamification = Gamification()
     new_xp = gamification.add_xp(message.from_user.id, "add_movie")
 

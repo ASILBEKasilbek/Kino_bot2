@@ -85,9 +85,15 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     if match:
         kod = match.group(1)
     movie = get_movie_by_code(movie_code)
+    if movie==None:
+        await message.reply("⚠️ Kino topilmadi!")
+        return 
     if not movie:
-        movie = get_movie_by_code(kod)
+        print(11.7,kod)
+        movie = get_movie_by_code(movie_code)
+        print(13,movie)
         if not movie:
+            print(14)
             await message.reply("⚠️ Kino topilmadi!")
             return
 
@@ -99,6 +105,7 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     if is_premium and not is_subscribed:
         await message.reply("💎 Bu premium kino! Iltimos, obuna bo‘ling: /buy_subscription")
         return
+    print(78)
 
     # Update statistics
     with sqlite3.connect(DB_PATH) as conn:
@@ -122,6 +129,7 @@ async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
             ]
         ]
     )
+    print(89)
     await bot.send_video(
         chat_id=message.chat.id,
         video=file_id,
@@ -391,7 +399,7 @@ async def inline_query_handler(inline_query: InlineQuery):
             f"🎭 *Janr:* {safe_genre}\n"
             f"📝 *Tavsif:* {safe_description}\n"
             f"👁 *Ko'rilgan:* {safe_views} marta\n\n"
-            f"➡ Tomosha qilish uchun pastdagi tugmani bosing 👇\n"
+            f"➡ Tomosha qilish uchun pastdagi tugmaniclear bosing 👇\n"
             f"🎟 KOD: {movie_code}"
         )
 
