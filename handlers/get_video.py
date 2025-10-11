@@ -4,19 +4,21 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from config import DB_PATH, BOT_TOKEN, CHANNEL_IDS
+from config import DB_PATH, BOT_TOKEN, CHANNEL_IDS,ADMIN_IDS
 from database.models import get_movie_by_code, get_all_channels, get_top_movies, add_to_watchlist, set_rating
-from utils.subscription_check import check_subscription_status, confirm_join
+# from utils.subscription_check import check_subscription_status, confirm_join
 import sqlite3
 from datetime import datetime
 import re
 import uuid
-
+from .buttons import movie_buttons
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.types import ChatJoinRequest
 # State for movie code input
 class MovieStates(StatesGroup):
     waiting_for_movie_code = State()
 
-# Router
+
 video_router = Router()
 
 # Helper function to get channel URL
@@ -63,6 +65,47 @@ async def _show_main_menu(message: Message, username: str, state: FSMContext):
         reply_markup=keyboard
     )
     await state.set_state(MovieStates.waiting_for_movie_code)
+
+# from aiogram import F
+
+# @video_router.message()  # Har qanday xabar
+# async def check_channels_before_any_message(message: Message, state: FSMContext):
+#     bot = Bot(token=BOT_TOKEN)
+#     user_id = message.from_user.id
+#     username = message.from_user.username or "No username"
+#     if user_id in ADMIN_IDS:
+#         return 
+#     channels = get_all_channels()  # [(channel_id, channel_link), ...]
+#     all_joined = True
+#     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+
+#     for i, (channel_id, channel_link) in enumerate(channels, 1):
+#         if re.match(r"^\d{9,}$", channel_id) and not channel_id.startswith("-100"):
+#             channel_id = f"-100{channel_id}"
+
+#         is_joined = await check_subscription_status(bot, user_id, channel_id)
+#         if not is_joined:
+#             all_joined = False
+#             keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=channel_link)])
+
+#     if not all_joined:
+#         keyboard.inline_keyboard.append(
+#             [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")]
+#         )
+#         await message.reply(
+#             "❌ Avval quyidagi kanallarga obuna bo‘ling:",
+#             reply_markup=keyboard
+#         )
+#         return  # bu yerda boshqa handlerlar ishlamaydi
+
+#     current_state = await state.get_state()
+#     if current_state == MovieStates.waiting_for_movie_code.state:
+#         if message.text=='/start':
+#             await _show_main_menu(message, username, state)
+#             return
+#         await _handle_movie_code(message, message.text.strip().upper(), bot)
+#     else:
+#         await _show_main_menu(message, username, state)
 
 async def _handle_movie_code(message: Message, movie_code: str, bot: Bot):
     text = (message.text or "").strip()
@@ -125,23 +168,19 @@ async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
-
-    # 🔎 Obuna tekshiramiz
-    channels = get_all_channels()
+    channels = get_all_channels()  # hozir [(channel_id, channel_link), ...] qaytadi
     all_joined = True
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
 
-    for i, channel in enumerate(channels, 1):
-        channel_id = str(channel)
-        if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
+    for i, (channel_id, channel_link) in enumerate(channels, 1):
+
+        if re.match(r"^\d{9,}$", channel_id) and not channel_id.startswith("-100"):
             channel_id = f"-100{channel_id}"
 
         is_joined = await check_subscription_status(bot, user_id, channel_id)
         if not is_joined:
             all_joined = False
-            url = await _get_channel_url(bot, channel_id)
-            if url:
-                keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=url)])
+            keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=channel_link)])
 
     if not all_joined:
         keyboard.inline_keyboard.append(
@@ -152,67 +191,101 @@ async def start_command(message: Message, state: FSMContext):
             reply_markup=keyboard
         )
         return
-
-    # ✅ Agar foydalanuvchi obuna bo‘lgan bo‘lsa — asosiy menyuni ko‘rsatamiz
     await _show_main_menu(message, username, state)
 
+pending_requests = {}  
 
-# Har qanday matn (kino kodi) uchun handler
-@video_router.message(MovieStates.waiting_for_movie_code)
-async def handle_movie_code(message: Message, state: FSMContext):
-    bot = Bot(token=BOT_TOKEN)
-    user_id = message.from_user.id
-    username = message.from_user.username or "No username"
+async def check_subscription_status(bot: Bot, user_id: int, channel_id: str) -> bool:
+    try:
+        chat_id = str(channel_id).strip()
 
-    # 🔎 Avval obuna tekshiramiz
-    channels = get_all_channels()
-    all_joined = True
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+        # Kanal ID formatlash (-100 bilan bo‘lmasa qo‘shamiz)
+        if re.match(r"^\d{9,}$", chat_id) and not chat_id.startswith("-100"):
+            chat_id = f"-100{chat_id}"
+        # 1️⃣ Avval pending request bor-yo‘qligini tekshiramiz
+        if user_id in pending_requests and chat_id in pending_requests[user_id]:
+            return True
 
-    for i, channel in enumerate(channels, 1):
-        channel_id = str(channel)
-        if not channel_id.startswith("-100") and re.match(r"^\d{9,}$", channel_id):
-            channel_id = f"-100{channel_id}"
+        # 2️⃣ Agar yo‘q bo‘lsa oddiy a’zolikni tekshiramiz
+        member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+        return member.status in ("member", "administrator", "creator")
 
-        is_joined = await check_subscription_status(bot, user_id, channel_id)
-        if not is_joined:
-            all_joined = False
-            url = await _get_channel_url(bot, channel_id)
-            if url:
-                keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=url)])
+    except TelegramBadRequest:
+        return False
+    except TelegramAPIError:
+        return False
+    except Exception:
+        return False
 
-    if not all_joined:
-        keyboard.inline_keyboard.append(
-            [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")]
-        )
-        await message.reply(
-            "❌ Avval quyidagi kanallarga obuna bo‘ling:",
-            reply_markup=keyboard
-        )
-        return
 
-    # ✅ Obuna bo‘lsa — kino kodini ishlaymiz
-    await _handle_movie_code(message, message.text.strip().upper(), bot)
+# Join request handler
+@video_router.chat_join_request()
+async def handle_join_request(event: ChatJoinRequest):
+    user_id = event.from_user.id
+    channel_id = str(event.chat.id)
 
-# Handle get video callback
-@video_router.callback_query(F.data == "get_video")
-async def process_get_video_callback(callback: CallbackQuery, state: FSMContext):
-    await callback.message.answer("🎬 Iltimos, kino kodini yuboring. Masalan: `123`", parse_mode="Markdown")
-    await state.set_state(MovieStates.waiting_for_movie_code)
-    await callback.answer()
+    # Dict ichiga yozamiz 
+    if user_id not in pending_requests:
+        pending_requests[user_id] = []
+    pending_requests[user_id].append(channel_id)
 
 # Handle subscription check
 @video_router.callback_query(F.data == "check_subscription")
 async def handle_check_subscription(callback: CallbackQuery, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = callback.from_user.id
-    is_subscribed = await check_subscription_status(bot, user_id, channel="")
     username = callback.from_user.username or "No username"
 
-    if is_subscribed:
+    channels = get_all_channels()  # [(channel_id, channel_link), ...]
+    all_joined = True
+
+    for channel_id, _ in channels:
+        # Kanal ID formatlash
+        if re.match(r"^\d{9,}$", channel_id) and not channel_id.startswith("-100"):
+            channel_id = f"-100{channel_id}"
+
+        is_joined = await check_subscription_status(bot, user_id, channel_id)
+        if not is_joined:
+            all_joined = False
+            break
+
+    if all_joined:
         await _show_main_menu(callback.message, username, state)
     else:
-        await callback.answer("❌ Siz hali ham obuna emassiz!", show_alert=True)
+        await callback.answer("❌ Siz hali ham barcha kanallarga obuna bo‘lmadingiz!", show_alert=True)
+
+@video_router.message(MovieStates.waiting_for_movie_code)
+async def handle_movie_code(message: Message, state: FSMContext):
+    bot = Bot(token=BOT_TOKEN)
+    user_id = message.from_user.id
+    username = message.from_user.username or "No username"
+
+    channels = get_all_channels()  # [(channel_id, channel_link), ...]
+    all_joined = True
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+
+    for i, (channel_id, channel_link) in enumerate(channels, 1):
+        if re.match(r"^\d{9,}$", channel_id) and not channel_id.startswith("-100"):
+            channel_id = f"-100{channel_id}"
+
+        is_joined = await check_subscription_status(bot, user_id, channel_id)
+        if not is_joined:
+            all_joined = False
+            keyboard.inline_keyboard.append([InlineKeyboardButton(text=f"📢 {i} Kanal", url=channel_link)])
+
+    if not all_joined:
+        keyboard.inline_keyboard.append(
+            [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_subscription")]
+        )
+        await message.reply(
+            "❌ Avval quyidagi kanallarga obuna bo‘ling:",
+            reply_markup=keyboard
+        )
+        return
+    if message.text=='/start':
+        await _show_main_menu(message, username, state)
+        return
+    await _handle_movie_code(message, message.text.strip().upper(), bot)
 
 # Handle join click
 @video_router.callback_query(F.data.startswith("join_"))
@@ -243,7 +316,6 @@ async def top_5_handler(callback: CallbackQuery):
     await callback.message.answer("🎯 Top 5 kinolar:", reply_markup=keyboard)
     await callback.answer()
 
-
 # 📌 Bugungi tavsiya
 @video_router.callback_query(F.data == "kunlik_film_tavsiyasi")
 async def daily_movie(callback: CallbackQuery):
@@ -261,7 +333,6 @@ async def daily_movie(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.answer("🎬 Bugungi tavsiya:", reply_markup=keyboard)
     await callback.answer()
-
 
 # 📌 Haftaning eng zo‘ri
 @video_router.callback_query(F.data == "haftalik_film_tavsiyasi")
@@ -343,7 +414,6 @@ async def send_selected_movie(callback: CallbackQuery):
         await callback.message.answer("Kechirasiz, kino topilmadi.")
     await callback.answer()
 
-# MarkdownV2 belgilarini qochirish uchun funksiya
 def escape_md(text: str) -> str:
     escape_chars = r"_*[]()~`>#+-=|{}.!"
     for ch in escape_chars:
@@ -439,21 +509,6 @@ async def handle_rating(callback: CallbackQuery):
     _, movie_id, rating = callback.data.split("_")
     set_rating(callback.from_user.id, int(movie_id), int(rating))
     await callback.answer(f"⭐ {rating} baho berildi!", show_alert=True)
-
-# Helper function for movie buttons
-def movie_buttons(movie_id):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Watchlist", callback_data=f"watchlist_add_{movie_id}")],
-            [
-                InlineKeyboardButton(text="⭐1", callback_data=f"rate_{movie_id}_1"),
-                InlineKeyboardButton(text="⭐2", callback_data=f"rate_{movie_id}_2"),
-                InlineKeyboardButton(text="⭐3", callback_data=f"rate_{movie_id}_3"),
-                InlineKeyboardButton(text="⭐4", callback_data=f"rate_{movie_id}_4"),
-                InlineKeyboardButton(text="⭐5", callback_data=f"rate_{movie_id}_5"),
-            ]
-        ]
-    )
 
 # Show all movies
 @video_router.callback_query(F.data == "barcha_kinolar")

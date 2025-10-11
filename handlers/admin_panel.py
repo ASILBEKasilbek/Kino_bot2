@@ -45,15 +45,11 @@ async def admin_panel_command(message: Message):
     logging.info(f"Admin panel accessed by user_id={message.from_user.id}")
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Kino qo‘shish", callback_data="add_movie"),
-         InlineKeyboardButton(text="🚫 Foydalanuvchi bloklash", callback_data="block_user")],
-        [InlineKeyboardButton(text="📊 Statistika", callback_data="stats"),
-         InlineKeyboardButton(text="🎛 Adminlarni boshqarish", callback_data="manage_admins")],
+        [InlineKeyboardButton(text="📊 Statistika", callback_data="stats")],
         [InlineKeyboardButton(text="📢 Kanallarni boshqarish", callback_data="manage_channels"),
          InlineKeyboardButton(text="📣 Reklama yuborish", callback_data="send_ad")],
         [InlineKeyboardButton(text="👥 Foydalanuvchilarni boshqarish", callback_data="manage_users"),
          InlineKeyboardButton(text="🎬 Kinolarni boshqarish", callback_data="manage_movies")],
-        [InlineKeyboardButton(text="⏰ Reklama rejalashtirish", callback_data="schedule_broadcast")],
         [InlineKeyboardButton(text="Yulduzchalar", callback_data="manage_stars")]
     ])
     await message.reply("🎛 Admin paneli:", reply_markup=keyboard)

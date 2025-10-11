@@ -146,7 +146,8 @@ def init_db():
     c.execute('''
         CREATE TABLE IF NOT EXISTS channels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            channel_id TEXT UNIQUE NOT NULL
+            channel_id TEXT UNIQUE NOT NULL,
+            channel_link TEXT NOT NULL  
         )
     ''')
     c.execute('''
