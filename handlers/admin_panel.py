@@ -117,6 +117,43 @@ DESCRIPTIONS = [
     "🚀 Hayajonli voqealar bilan to‘la film!"
 ]
 
+@admin_router.message(Command("k1"))
+async def add_movie_manual_handler(message: types.Message, state: FSMContext):
+    logging.info(f"manual_add_movie triggered by user_id={message.from_user.id}")
+
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
+        return
+
+    # Kino kodi uchun so‘raymiz
+    await state.set_state(AddMovieForm.code)
+    await message.reply("🔢 Iltimos, kino kodini o‘zingiz kiriting (faqat raqam):")
+
+
+@admin_router.message(AddMovieForm.code)
+async def process_manual_movie_code(message: types.Message, state: FSMContext):
+    code = message.text.strip()
+
+    if not code.isdigit():
+        await message.reply("⚠️ Iltimos, faqat raqam kiriting!")
+        return
+
+    # Bazada shu kod mavjud emasligini tekshiramiz
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM movies WHERE id = ?", (code,))
+    exists = c.fetchone()[0]
+    conn.close()
+
+    if exists:
+        await message.reply("🚫 Bu kodli kino allaqachon mavjud! Iltimos, boshqa kod kiriting.")
+        return
+
+    # Agar yo‘q bo‘lsa — davom etamiz
+    await state.update_data(code=code)
+    await state.set_state(AddMovieForm.title)
+    await message.reply(f"🎬 Kino kodi belgilandi: {code}\n\n📽 Kino nomini kiriting:")
+
 
 @admin_router.message(Command("k"))
 async def add_movie_handler(message: types.Message, state: FSMContext):
