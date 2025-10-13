@@ -10,6 +10,22 @@ def get_all_channels():
     conn.close()
     return [(row[0], row[1]) for row in rows]
 
+def get_missing_movie_ids():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id FROM movies ORDER BY id")
+    ids = [row[0] for row in c.fetchall()]
+    conn.close()
+
+    if not ids:
+        return []
+
+    all_ids = set(range(1, ids[-1] + 1))
+    existing_ids = set(ids)
+    missing_ids = sorted(list(all_ids - existing_ids))
+    return missing_ids
+
+
 def get_movie_by_code(code: str):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()

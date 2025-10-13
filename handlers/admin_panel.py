@@ -12,7 +12,7 @@ import logging
 import asyncio
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-
+from database.models import get_missing_movie_ids
 
 admin_router = Router()
 
@@ -36,8 +36,11 @@ class BroadcastForm(StatesGroup):
 class AdStates(StatesGroup):
     waiting_for_ad = State()
 
+
+
+
 @admin_router.message(Command("admin"))
-async def admin_panel_command(message: Message):
+async def admin_panel_command(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         await message.reply("🚫 Bu buyruq faqat adminlar uchun!")
         return
@@ -50,10 +53,20 @@ async def admin_panel_command(message: Message):
          InlineKeyboardButton(text="📣 Reklama yuborish", callback_data="send_ad")],
         [InlineKeyboardButton(text="👥 Foydalanuvchilarni boshqarish", callback_data="manage_users"),
          InlineKeyboardButton(text="🎬 Kinolarni boshqarish", callback_data="manage_movies")],
-        [InlineKeyboardButton(text="Yulduzchalar", callback_data="manage_stars")]
+        [InlineKeyboardButton(text="✨ Yulduzchalar", callback_data="manage_stars")],
+        [InlineKeyboardButton(text="🎯 Yo‘qolgan kino kodlari", callback_data="missing_movies")],
     ])
     await message.reply("🎛 Admin paneli:", reply_markup=keyboard)
 
+@admin_router.callback_query(lambda c: c.data == "missing_movies")
+async def show_missing_movies(callback: types.CallbackQuery):
+    missing = get_missing_movie_ids()
+    if not missing:
+        await callback.message.reply("✅ Hech qanday kod yo‘qolmagan — hammasi joyida!")
+    else:
+        formatted = ", ".join(map(str, missing))
+        await callback.message.reply(f"🎬 Yo‘qolgan kino kodlari: {formatted}")
+    await callback.answer()  # Callback loadingni to‘xtatadi
 
 
 @admin_router.callback_query(F.data == "manage_stars")
