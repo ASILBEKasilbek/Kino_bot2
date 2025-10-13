@@ -168,6 +168,13 @@ async def start_command(message: Message, state: FSMContext):
     bot = Bot(token=BOT_TOKEN)
     user_id = message.from_user.id
     username = message.from_user.username or "No username"
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT OR IGNORE INTO users (user_id, username, registration_date, last_activity) VALUES (?, ?, ?, ?)",
+            (user_id, username, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        conn.commit()
     channels = get_all_channels()  # hozir [(channel_id, channel_link), ...] qaytadi
     all_joined = True
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
