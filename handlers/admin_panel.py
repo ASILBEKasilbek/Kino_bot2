@@ -204,9 +204,10 @@ async def process_movie_video(message: Message, state: FSMContext):
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
-
+    await message.reply("ishladi")
     user_data = await state.get_data()
     movie_code = user_data["code"]
+    await message.reply(movie_code)
     title = user_data["title"]
     description = user_data["description"]
     genre = user_data["genre"]
