@@ -114,8 +114,66 @@ DESCRIPTIONS = [
     "💎 Tomosha qilishni boy bermang!",
     "⭐ Bu kinoni hamma kutgan edi!",
     "🎥 Zavq bilan tomosha qiling!",
-    "🚀 Hayajonli voqealar bilan to‘la film!"
+    "🚀 Hayajonli voqealar bilan to‘la film!",
+    "🎞️ Haqiqiy san’at asari!",
+    "💥 Syujet sizni hayratda qoldiradi!",
+    "🌟 Aktyorlar ijrosi ajoyib darajada!",
+    "💣 Hamma bu film haqida gapirmoqda!",
+    "🎭 Drama, hissiyot va hayotiy voqealar bir joyda!",
+    "😱 Har bir lahzasi yurakni tez urdiradi!",
+    "💔 Sevgining, sadoqatning va fojianing hikoyasi!",
+    "😂 Kulgi, kayfiyat va ijobiy hissiyotlar to‘la!",
+    "🕵️ Sirli voqealar sizni o‘ziga tortadi!",
+    "⚡ Film so‘nggacha sizni hayajonda ushlab turadi!",
+    "🧩 Har bir kadrda yashiringan ma’no!",
+    "👑 Bu yilgi eng kutilgan film!",
+    "🌌 Fantastik olamga sayohat qiling!",
+    "🏆 Tanqidchilar tomonidan yuqori baholangan film!",
+    "🕰️ Har bir daqiqasi qimmatli!",
+    "🔥 Adrenalinni his eting!",
+    "🎧 Ajoyib saundtreklar bilan boyitilgan!",
+    "🌹 Romantika va hissiyotlar uyg‘unligi!",
+    "🧠 Fikr o‘yg‘otuvchi va chuqur mazmunga ega film!",
+    "🎯 Hikoya sizni o‘ylantiradi!",
+    "🏝️ Yangi dunyoga eshik ochuvchi sarguzasht!",
+    "💫 Tomosha qilsangiz, afsuslanmaysiz!",
+    "🌍 Dunyo bo‘ylab mashhur bo‘lgan asar asosida!",
+    "🦸 Qahramonlik, kurash va g‘alaba hikoyasi!",
+    "👁️ Kutilmagan burilishlarga tayyor bo‘ling!",
+    "📽️ Har bir sahna – alohida san’at!",
+    "🎉 Oila davrasida tomosha qilish uchun ajoyib tanlov!",
+    "💬 Tomoshabinlardan eng yaxshi izohlar!",
+    "🔥 Trendda bo‘lgan kino!",
+    "🎆 Emotsiyalarga boy film tajribasi!",
+    "🧭 Sarguzasht izlayotganlar uchun maxsus!",
+    "🎡 His-tuyg‘ular karuseli sizni kutmoqda!",
+    "🌈 Har bir daqiqa – zavq va hayajon!",
+    "🪄 Sehrli hikoya sizni o‘ziga rom qiladi!"
 ]
+
+
+@admin_router.message(Command("k"))
+async def add_movie_handler(message: types.Message, state: FSMContext):
+    logging.info(f"add_movie triggered by user_id={message.from_user.id}")
+
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
+        return
+
+    # Oxirgi id ni olib, yangi kod tayyorlaymiz
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT MAX(id) FROM movies")
+    last_id = c.fetchone()[0] or 0
+    conn.close()
+
+    new_code = f"{last_id + 1}"
+    await state.update_data(code=new_code)
+
+    # Keyingi bosqichga o‘tamiz
+    await state.set_state(AddMovieForm.title)
+    await message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
+
 
 @admin_router.message(Command("k1"))
 async def add_movie_manual_handler(message: types.Message, state: FSMContext):
@@ -155,28 +213,6 @@ async def process_manual_movie_code(message: types.Message, state: FSMContext):
     await message.reply(f"🎬 Kino kodi belgilandi: {code}\n\n📽 Kino nomini kiriting:")
 
 
-@admin_router.message(Command("k"))
-async def add_movie_handler(message: types.Message, state: FSMContext):
-    logging.info(f"add_movie triggered by user_id={message.from_user.id}")
-
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("🚫 Faqat adminlar kino qo‘shishi mumkin!")
-        return
-
-    # Oxirgi id ni olib, yangi kod tayyorlaymiz
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT MAX(id) FROM movies")
-    last_id = c.fetchone()[0] or 0
-    conn.close()
-
-    new_code = f"{last_id + 1}"
-    await state.update_data(code=new_code)
-
-    # Keyingi bosqichga o‘tamiz
-    await state.set_state(AddMovieForm.title)
-    await message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
-
 
 @admin_router.message(AddMovieForm.title)
 async def process_movie_title(message: Message, state: FSMContext):
@@ -197,19 +233,15 @@ async def process_movie_title(message: Message, state: FSMContext):
     # Keyingi bosqich: video
     await state.set_state(AddMovieForm.video)
     await message.reply("🎥 Kino videosini yuboring:")
-    await message.reply("utdi")
 
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
 async def process_movie_video(message: Message, state: FSMContext): 
-    await message.reply("keldi")
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
-    await message.reply("ishladi")
     user_data = await state.get_data()
     movie_code = user_data["code"]
-    await message.reply(movie_code)
     title = user_data["title"]
     description = user_data["description"]
     genre = user_data["genre"]
