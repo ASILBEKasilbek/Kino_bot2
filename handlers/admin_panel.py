@@ -176,7 +176,6 @@ async def add_movie_handler(message: types.Message, state: FSMContext):
     # Keyingi bosqichga o‘tamiz
     await state.set_state(AddMovieForm.title)
     await message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
-    await message.reply("utdi")
 
 
 @admin_router.message(AddMovieForm.title)
@@ -198,10 +197,12 @@ async def process_movie_title(message: Message, state: FSMContext):
     # Keyingi bosqich: video
     await state.set_state(AddMovieForm.video)
     await message.reply("🎥 Kino videosini yuboring:")
+    await message.reply("utdi")
 
 
 @admin_router.message(AddMovieForm.video, F.content_type == ContentType.VIDEO)
 async def process_movie_video(message: Message, state: FSMContext): 
+    await message.reply("keldi")
     if not message.video:
         await message.reply("⚠️ Iltimos, video yuboring!")
         return
