@@ -176,6 +176,7 @@ async def add_movie_handler(message: types.Message, state: FSMContext):
     # Keyingi bosqichga o‘tamiz
     await state.set_state(AddMovieForm.title)
     await message.reply(f"🎬 Kino kodi avtomatik berildi: {new_code}\n\n📽 Kino nomini kiriting:")
+    await message.reply("utdi")
 
 
 @admin_router.message(AddMovieForm.title)
