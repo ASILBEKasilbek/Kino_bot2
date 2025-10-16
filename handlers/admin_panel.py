@@ -495,7 +495,10 @@ async def list_movies_callback(callback: CallbackQuery):
                 f.write(f"{movie[0]} | {movie[1]} | {movie[2]} | {movie[3]} | {premium}\n")
 
         # Faylni yuborish uchun InputFile dan foydalanamiz (yo'lni berish eng oddiy va xavfsiz)
-        await callback.message.answer_document(InputFile(file_path))
+        # await callback.message.answer_document(InputFile(file_path))
+        from aiogram.types import FSInputFile
+
+        await callback.message.answer_document(FSInputFile(file_path))
 
         # Bazadan 10 ta filmni preview uchun olamiz
         c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
