@@ -463,47 +463,112 @@ async def manage_movies_callback(callback: CallbackQuery):
     except Exception as e:
         logging.warning(f"Failed to delete message: {e}")
 
+from aiogram.types import InputFile, CallbackQuery
+import sqlite3
+import logging
+import os
+
 @admin_router.callback_query(F.data == "list_movies")
 async def list_movies_callback(callback: CallbackQuery):
     logging.info(f"list_movies callback triggered by user_id={callback.from_user.id}, callback_data={callback.data}")
-    
+
     if callback.from_user.id not in ADMIN_IDS:
         await callback.message.reply("🚫 Faqat adminlar kinolarni ko‘rishi mumkin!")
         return
-    
+
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies")
-    movies = c.fetchall()
+    file_path = "movies_list.txt"
 
-    with open("movies_list.txt", "w", encoding="utf-8") as f:
-        for movie in movies:
-            premium = "Premium" if movie[4] else "Free"
-            f.write(f"{movie[0]} | {movie[1]} | {movie[2]} | {movie[3]} | {premium}\n")
-
-    await callback.message.answer_document(open("movies_list.txt", "rb"))
-
-    c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
-    movies = c.fetchall()
-    conn.close()
-    
-
-
-    
-    if not movies:
-        await callback.message.reply("📭 Kinolar topilmadi!")
-        return
-    
-    message_text = "🎬 Kinolar ro‘yxati:\n\n"
-    for movie in movies:
-        premium = "💎 Premium" if movie[4] else "🆓 Bepul"
-        message_text += f"Kod: {movie[0]}\nNomi: {movie[1]}\nJanr: {movie[2]}\nYil: {movie[3]}\nStatus: {premium}\n\n"
-    
-    await callback.message.reply(message_text)
     try:
-        await callback.message.delete()
+        c = conn.cursor()
+        c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies")
+        movies_all = c.fetchall()
+
+        if not movies_all:
+            await callback.message.reply("📭 Kinolar topilmadi!")
+            return
+
+        # Faylga yozamiz (UTF-8)
+        with open(file_path, "w", encoding="utf-8") as f:
+            for movie in movies_all:
+                premium = "Premium" if movie[4] else "Free"
+                f.write(f"{movie[0]} | {movie[1]} | {movie[2]} | {movie[3]} | {premium}\n")
+
+        # Faylni yuborish uchun InputFile dan foydalanamiz (yo'lni berish eng oddiy va xavfsiz)
+        await callback.message.answer_document(InputFile(file_path))
+
+        # Bazadan 10 ta filmni preview uchun olamiz
+        c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
+        movies_preview = c.fetchall()
+
+        message_text = "🎬 Kinolar ro‘yxati (preview):\n\n"
+        for movie in movies_preview:
+            premium = "💎 Premium" if movie[4] else "🆓 Bepul"
+            message_text += (
+                f"Kod: {movie[0]}\n"
+                f"Nomi: {movie[1]}\n"
+                f"Janr: {movie[2]}\n"
+                f"Yil: {movie[3]}\n"
+                f"Status: {premium}\n\n"
+            )
+
+        await callback.message.reply(message_text)
+
     except Exception as e:
-        logging.warning(f"Failed to delete message: {e}")
+        logging.exception("list_movies_callback error")
+        await callback.message.reply("❗ Xatolik yuz berdi. Loglarni tekshiring.")
+    finally:
+        conn.close()
+        # agar vaqtinchalik fayl kerak bo'lmasa, o'chirib tashlaymiz
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+
+        # eslatma: ishlab chiqarishda xohlasangiz faylni o'chirmasligingiz yoki /tmp ga yozishingiz mumkin
+        try:
+            await callback.message.delete()
+        except Exception as e:
+            logging.warning(f"Failed to delete message: {e}")
+
+# @admin_router.callback_query(F.data == "list_movies")
+# async def list_movies_callback(callback: CallbackQuery):
+#     logging.info(f"list_movies callback triggered by user_id={callback.from_user.id}, callback_data={callback.data}")
+    
+#     if callback.from_user.id not in ADMIN_IDS:
+#         await callback.message.reply("🚫 Faqat adminlar kinolarni ko‘rishi mumkin!")
+#         return
+    
+#     conn = sqlite3.connect(DB_PATH)
+#     c = conn.cursor()
+#     c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies")
+#     movies = c.fetchall()
+
+#     with open("movies_list.txt", "w", encoding="utf-8") as f:
+#         for movie in movies:
+#             premium = "Premium" if movie[4] else "Free"
+#             f.write(f"{movie[0]} | {movie[1]} | {movie[2]} | {movie[3]} | {premium}\n")
+
+#     await callback.message.answer_document(open("movies_list.txt", "rb"))
+
+#     c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
+#     movies = c.fetchall()
+#     conn.close()
+
+#     if not movies:
+#         await callback.message.reply("📭 Kinolar topilmadi!")
+#         return
+    
+#     message_text = "🎬 Kinolar ro‘yxati:\n\n"
+#     for movie in movies:
+#         premium = "💎 Premium" if movie[4] else "🆓 Bepul"
+#         message_text += f"Kod: {movie[0]}\nNomi: {movie[1]}\nJanr: {movie[2]}\nYil: {movie[3]}\nStatus: {premium}\n\n"
+    
+#     await callback.message.reply(message_text)
+#     try:
+#         await callback.message.delete()
+#     except Exception as e:
+#         logging.warning(f"Failed to delete message: {e}")
 
 @admin_router.message(AddMovieForm.delete)
 async def process_delete_code(message: types.Message, state: FSMContext):
