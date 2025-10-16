@@ -473,16 +473,21 @@ async def list_movies_callback(callback: CallbackQuery):
     
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
+    c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies")
     movies = c.fetchall()
-    conn.close()
-    
+
     with open("movies_list.txt", "w", encoding="utf-8") as f:
         for movie in movies:
             premium = "Premium" if movie[4] else "Free"
             f.write(f"{movie[0]} | {movie[1]} | {movie[2]} | {movie[3]} | {premium}\n")
 
     await callback.message.answer_document(open("movies_list.txt", "rb"))
+
+    c.execute("SELECT movie_code, title, genre, year, is_premium FROM movies LIMIT 10")
+    movies = c.fetchall()
+    conn.close()
+    
+
 
     
     if not movies:
